@@ -26,16 +26,6 @@ batch_num = 1000
 # learning rate
 mu = 1.0
 
-#lookup table
-map_48_39 = read.get_map_48_39()
-map_48_idx = {}
-
-def setPhoneIdx():
-  global map_48_39, map_48_idx
-  temp = map_48_39.items()
-  for i in range(48):
-    map_48_idx[temp[i][0]] = i
-
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
@@ -76,6 +66,7 @@ def make_batch(size, num):
   print X_ret, Y_ret
   return X_ret, Y_ret
 
+# temporarily make test = train
 def make_test():
   global train_fbank
   test_X = [[] for i in range(69)]
@@ -124,9 +115,9 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 2.0
+  mu = 0.1
   print "start training"
-  for i in range(100):
+  for i in range(10000):
     cost = 0
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
