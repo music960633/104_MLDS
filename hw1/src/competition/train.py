@@ -5,7 +5,8 @@ import theano.tensor as T
 import numpy
 import random
 import re
-from itertools import izip 
+from itertools import izip
+read = __import__("read")
 
 # random function
 def myRand(mn, mx):
@@ -21,10 +22,20 @@ batch_num = 1000
 # learning rate
 mu = 1.0
 
+#lookup table
+map_48_39 = read.get_map_48_39()
+map_48_idx = {}
+
+def setPhoneIdx():
+  global map_48_39, map_48_idx
+  temp = map_48_39.items()
+  for i in range(48):
+    map_48_idx[temp[i][0]] = i
+
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(2)  ] for i in range(100)], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(69)  ] for i in range(100)], dtype="float32"))
 w2    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
 w3    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
 w4    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(1)  ], dtype="float32"))
@@ -44,34 +55,24 @@ z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
 y  = 1 / (1 + T.exp(-z4))
 prediction = y > 0.5
 
-# read raw data
-def readRawData():
-  global raw_data
-  f = open("miku.txt", "r")
-  while True:
-    s = f.readline()
-    if s == "": break
-    tokens = re.findall(r'[-.0-9]+', s)
-    nums = [numpy.float32(x) for x in tokens]
-    raw_data += [nums]
-  f.close()
-
-def make_batch(data, size, num):
+def make_batch(data, size, num, ans):
   data_size = len(data)
   X_ret = []
   Y_ret = []
   for i in range(num):
-    X_batch = [[], []]
-    Y_batch = [[]]
+    X_batch = [[] for t in range(69)]
+    Y_batch = [[0 for u in range(size)] for t in range(48)]
+    print Y_batch
     for j in range(size):
       # random select
       idx = int(random.random() * data_size)
-      X_batch[0] += [data[idx][0]]
-      X_batch[1] += [data[idx][1]]
-      Y_batch[0] += [data[idx][2]]
-
+      for k in range(69):
+        X_batch[k] += [data[idx][1][k]]
+      phoneIdx = map_48_idx[ans[data[idx][0]]]
+      Y_batch[phoneIdx][j] = 1
     X_ret += [X_batch]
     Y_ret += [Y_batch]
+  print X_ret, Y_ret
   return X_ret, Y_ret
 
 # update function
@@ -102,12 +103,15 @@ test = theano.function(
 def main():
   global raw_data, batch_size, batch_num
   global mu
-  readRawData()
+  raw_data = read.get_fbank()
+  raw_data = raw_data.items()
+  ans = read.get_map_inst_48()
+  setPhoneIdx()
   mu = 1
   for i in range(100):
     cost = 0
     if i == 50: mu = 0.01
-    X_batch, Y_hat_batch = make_batch(raw_data, batch_size, batch_num)
+    X_batch, Y_hat_batch = make_batch(raw_data, batch_size, batch_num, ans)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
