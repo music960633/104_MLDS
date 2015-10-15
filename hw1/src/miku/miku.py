@@ -18,23 +18,30 @@ raw_data = []
 batch_size = 10
 batch_num = 1000
 
+# learning rate
+mu = 1.0
+
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(2)  ] for i in range(300)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(300)] for i in range(300)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(300)] for i in range(1)  ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(300)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(300)], dtype="float32"))
-b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(1)  ], dtype="float32"))
-parameters = [w1, w2, w3, b1, b2, b3]
+w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(2)  ] for i in range(100)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
+w4    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(1)  ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b4    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(1)  ], dtype="float32"))
+parameters = [w1, w2, w3, w4, b1, b2, b3, b4]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
 a1 = 1 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = 1 / (1 + T.exp(-z3))
+a3 = 1 / (1 + T.exp(-z3))
+z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
+y  = 1 / (1 + T.exp(-z4))
 prediction = y > 0.5
 
 # read raw data
@@ -69,8 +76,8 @@ def make_batch(data, size, num):
 
 # update function
 def updateFunc(param, grad):
-  mu = numpy.float32(1.0)
-  param_updates = [(p, p - mu * g) for p, g in izip(param, grad)]
+  global mu
+  param_updates = [(p, p - numpy.float32(mu) * g) for p, g in izip(param, grad)]
   return param_updates
 
 # cost function
@@ -94,9 +101,12 @@ test = theano.function(
 
 def main():
   global raw_data, batch_size, batch_num
+  global mu
   readRawData()
-  for i in range(50):
+  mu = 1
+  for i in range(100):
     cost = 0
+    if i == 50: mu = 0.01
     X_batch, Y_hat_batch = make_batch(raw_data, batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
