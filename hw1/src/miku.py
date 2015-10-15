@@ -7,9 +7,9 @@ import random
 import re
 from itertools import izip 
 
-# random function
+# random function, mn and mx should be int
 def myRand(mn, mx):
-   return mn + (random.random() * (mx - mn))
+   return mn + int(random.random() * (mx - mn))
 
 # raw data
 raw_data = []
@@ -21,21 +21,24 @@ batch_num = 1000
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(2)  ] for i in range(300)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(300)] for i in range(300)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(300)] for i in range(1)  ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(300)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(300)], dtype="float32"))
-b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(1)  ], dtype="float32"))
-parameters = [w1, w2, w3, b1, b2, b3]
+w1    = theano.shared(numpy.matrix([[myRand(-0.5 , 0.5 ) for j in range(2)  ] for i in range(100)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(100)], dtype="float32"))
+w4    = theano.shared(numpy.matrix([[myRand(-0.05, 0.05) for j in range(100)] for i in range(1)  ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(100)], dtype="float32"))
+b4    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(1)  ], dtype="float32"))
+parameters = [w1, w2, w3, w4, b1, b2, b3, b4]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
 a1 = 1 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = 1 / (1 + T.exp(-z3))
-prediction = y > 0.5
+a3 = 1 / (1 + T.exp(-z3))
+z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
+y  = 1 / (1 + T.exp(-z4))
 
 # read raw data
 def readRawData():
@@ -69,7 +72,7 @@ def make_batch(data, size, num):
 
 # update function
 def updateFunc(param, grad):
-  mu = numpy.float32(1.0)
+  mu = numpy.float32(2.0)
   param_updates = [(p, p - mu * g) for p, g in izip(param, grad)]
   return param_updates
 
@@ -89,7 +92,7 @@ train = theano.function(
 # testing function
 test = theano.function(
     inputs = [x],
-    outputs = prediction
+    outputs = y
 )
 
 def main():
@@ -108,8 +111,8 @@ def main():
   wrong = 0
   f = open("miku.result", "w+")
   for i in range(len(raw_data)):
-    f.write("%.2f %.2f %d\n" % (raw_data[i][0], raw_data[i][1], result[0][i]))
-    if result[0][i] == raw_data[i][2]:
+    f.write("%.2f %.2f %.4f\n" % (raw_data[i][0], raw_data[i][1], result[0][i]))
+    if (result[0][i] < 0.5 and raw_data[i][2] == 0.0) or (result[0][i] >= 0.5 and raw_data[i][2] == 1.0):
       correct += 1
     else:
       wrong += 1

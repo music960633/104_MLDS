@@ -1,0 +1,33 @@
+network: 2*100*100*1
+batch_size: 10
+batch_num : 1000
+iteration : 100
+learning rate: 1.0
+
+[O/X]
+1. 238414 / 11586
+2. 235664 / 14336
+
+===================
+
+network: 2*300*300*1
+batch_size: 10
+batch_num : 1000
+iteration : 50
+learning rate: 1.0
+
+[O/X]
+1. 228362 / 21638
+2. 235295 / 14705
+
+===================
+
+network: 2*100*100*100*1
+batch_size: 10
+batch_num : 1000
+iteration : 100
+learning rate: 1.0
+
+[O/X]
+1. 231976 / 18024
+2. 224189 / 25811
