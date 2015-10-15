@@ -3,7 +3,7 @@ import theano.tensor as T
 import numpy
 import random
 import re
-from itertools import izip 
+from itertools import izip
 
 import readdata
 
@@ -25,6 +25,16 @@ batch_num = 1000
 
 # learning rate
 mu = 1.0
+
+#lookup table
+map_48_39 = read.get_map_48_39()
+map_48_idx = {}
+
+def setPhoneIdx():
+  global map_48_39, map_48_idx
+  temp = map_48_39.items()
+  for i in range(48):
+    map_48_idx[temp[i][0]] = i
 
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
@@ -63,6 +73,7 @@ def make_batch(size, num):
         Y_batch[k] += [numpy.float32(1) if map_inst_48[train_inst[idx]] == map_idx_48[k] else numpy.float32(0)]
     X_ret += [X_batch]
     Y_ret += [Y_batch]
+  print X_ret, Y_ret
   return X_ret, Y_ret
 
 def make_test():
