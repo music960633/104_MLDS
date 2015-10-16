@@ -29,12 +29,12 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(128)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(128)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
-b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.01, 0.01) for j in range(69) ] for i in range(128)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.01, 0.01) for j in range(128)] for i in range(128)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.01, 0.01) for j in range(128)] for i in range(48) ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.01, 0.01) for i in range(128)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.01, 0.01) for i in range(128)], dtype="float32"))
+b3    = theano.shared(numpy.array([myRand(-0.01, 0.01) for i in range(48) ], dtype="float32"))
 parameters = [w1, w2, w3, b1, b2, b3]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
@@ -63,7 +63,6 @@ def make_batch(size, num):
         Y_batch[k] += [numpy.float32(1) if map_inst_48[train_inst[idx]] == map_idx_48[k] else numpy.float32(0)]
     X_ret += [X_batch]
     Y_ret += [Y_batch]
-  print X_ret, Y_ret
   return X_ret, Y_ret
 
 # temporarily make test = train
@@ -117,7 +116,7 @@ def run():
   global mu
   mu = 0.1
   print "start training"
-  for i in range(10000):
+  for i in range(1000):
     cost = 0
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
