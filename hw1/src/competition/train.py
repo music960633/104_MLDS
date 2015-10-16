@@ -20,7 +20,7 @@ map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
 map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
 
 # batch size and number
-batch_size = 10
+batch_size = 128
 batch_num = 1000
 
 # learning rate
@@ -67,11 +67,11 @@ def make_batch(size, num):
 
 # temporarily make test = train
 def make_test():
-  global train_fbank
+  global test_fbank
   test_X = [[] for i in range(69)]
-  for i in range(len(train_fbank)):
+  for i in range(len(test_fbank)):
     for k in range(69):
-      test_X[k] += [train_fbank[i][k]]
+      test_X[k] += [test_fbank[i][k]]
   return test_X
 
 # update function
@@ -114,24 +114,26 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.1
+  mu = 0.01
   print "start training"
-  for i in range(1000):
+  print "mu = ", mu
+  print "mu -= 0.00001"
+  print "batch_size = ", batch_size
+  print "batch_num = ", batch_num
+  for i in range(250):
     cost = 0
+    mu -= 0.00001
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
     print i, " cost: ", cost
+    if cost <= 0.15: break
 
   X_test = make_test()
   result = test(X_test)
   
   f = open("result.csv", "w+")
   f.write("Id,Prediction\n")
-  # for i in range(len(test_inst)):
-  #   f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
-  for i in range(len(train_inst)):
-    f.write("%s,%s\n" % (train_inst[i], match([result[j][i] for j in range(48)])))
-  f.close()
-
+  for i in range(len(test_inst)):
+    f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
