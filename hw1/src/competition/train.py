@@ -31,9 +31,9 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(128)], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(256)], dtype="float32"))
 w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256) ], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(48) ], dtype="float32"))
 b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
 b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
 b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
@@ -154,18 +154,18 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  eta = 0.01
+  eta = 0.02
   tStart = time.time()
   
   init()
   
   # training information
   f = open("cost.txt", "w+")
-  f.write("train data: small + change data")
-  f.write("eta =" % eta)
+  f.write("train data: small + change data\n")
+  f.write("eta = %d\n" % eta)
   f.write("mu = eta / ((i+1) ** 0.5)")
-  f.write("batch_size =" % batch_size)
-  f.write("batch_num =" % batch_num)
+  f.write("batch_size = %d\n" % batch_size)
+  f.write("batch_num = %d\n" % batch_num)
   f.write("3 layers: 69-256-256-48")
   
   print "start training"
@@ -193,7 +193,7 @@ def run():
   X_test = make_input(test_fbank)
   result = test(X_test)
   
-  f = open("result_music960633_2.csv", "w+")
+  f = open("result/result_music960633_2.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
