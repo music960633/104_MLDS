@@ -142,6 +142,3 @@ def run():
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
-  #for i in range(len(train_inst)):
-    #f.write("%s,%s\n" % (train_inst[i], match([result[j][i] for j in range(48)])))
-  f.close()
