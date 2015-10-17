@@ -4,7 +4,6 @@ import numpy
 import random
 import re
 import time
-from itertools import izip
 
 import readdata
 
@@ -13,15 +12,17 @@ def myRand(mn, mx):
    return mn + (random.random() * (mx - mn))
 
 # raw data
-train_inst, train_fbank = readdata.get_train_fbank()
-test_inst , test_fbank  = readdata.get_test_fbank()
-map_inst_48 = readdata.get_map_inst_48()
-map_48_39   = readdata.get_map_48_39()
-map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
-map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
+train_inst  = []
+train_fbank = []
+test_inst   = []
+test_fbank  = []
+map_inst_48 = {}
+map_48_39   = {}
+map_idx_48  = {}
+map_48_idx  = {}
 
 # batch size and number
-batch_size = 256
+batch_size = 128
 batch_num = 1024
 
 # learning rate
@@ -30,11 +31,11 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(256)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(128)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(128)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(48) ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
 b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
 parameters = [w1, w2, w3, b1, b2, b3]
 
@@ -45,6 +46,26 @@ a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
 y  = 1 / (1 + T.exp(-z3))
 
+def init():
+  print "initializing..."
+  global train_inst, train_fbank
+  global test_inst, test_fbank
+  global map_inst_48, map_48_39
+  global map_idx_48, map_48_idx
+  # training data
+  print "reading training data"
+  train_inst, train_fbank = readdata.get_small_train_fbank()
+  # testing data
+  print "reading testing data"
+  test_inst , test_fbank  = readdata.get_test_fbank()
+  # instance name and phone mapping
+  print "reading instance name - phone mapping"
+  map_inst_48 = readdata.get_map_inst_48()
+  map_48_39   = readdata.get_map_48_39()
+  # phone and index mapping
+  print "generating phone - index mapping"
+  map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
+  map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
 
 def make_batch(size, num):
   global train_inst, train_fbank
@@ -67,18 +88,17 @@ def make_batch(size, num):
   return X_ret, Y_ret
 
 # temporarily make test = train
-def make_test():
-  global test_fbank
-  test_X = [[] for i in range(69)]
-  for i in range(len(test_fbank)):
+def make_input(fbank):
+  input_fbank = [[] for i in range(69)]
+  for i in range(len(fbank)):
     for k in range(69):
-      test_X[k] += [test_fbank[i][k]]
-  return test_X
+      input_fbank[k] += [fbank[i][k]]
+  return input_fbank
 
 # update function
 def updateFunc(param, grad):
   global mu
-  param_updates = [(p, p - numpy.float32(mu) * g) for p, g in izip(param, grad)]
+  param_updates = [(p, p - numpy.float32(mu) * g) for p, g in zip(param, grad)]
   return param_updates
 
 # cost function
@@ -110,6 +130,19 @@ def match(arr):
       mx = arr[i]
   return map_48_39[map_idx_48[idx]]
 
+def validate():
+  global map_inst_48, map_inst_48_39
+  valid_inst, valid_fbank = readdata.get_small_train_fbank()
+  valid_input = make_input(valid_fbank)
+  valid_result = test(valid_input)
+  data_size = len(valid_inst)
+  correct = 0
+  for i in range(data_size):
+    if map_48_39[map_inst_48[valid_inst[i]]] == match([valid_result[j][i] for j in range(48)]):
+      correct += 1
+  percentage = float(correct) / data_size
+  print "validate:", correct, "/", data_size, "(", percentage, ")" 
+  return percentage > 0.7
 
 def run():
   global batch_size, batch_num
@@ -117,14 +150,19 @@ def run():
   global mu
   eta = 0.01
   tStart = time.time()
+  
+  init()
+
   print "train data: f (0.3 million)"
   print "eta = ", eta
   print "mu = eta / ((i+1) ** 0.5)"
   print "batch_size = ", batch_size
   print "batch_num = ", batch_num
-  print "3 layers: 69-256-256-48"
+  print "3 layers: 69-128-128-48"
   print "start training"
-  for i in range(5):
+  
+  f = open("cost.txt", "w+")
+  for i in range(1, 10000):
     cost = 0
     mu = eta / ((i + 1) ** 0.5)
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
@@ -132,13 +170,17 @@ def run():
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
     print i, " cost: ", cost
-    if cost <= 0.25: break
+    f.write("%d, cost: %f\n" % (i, cost))
+    if (i % 10 == 0) and validate(): 
+       break
+
+  f.close()
   tEnd = time.time()
   print "It cost %f mins" % ((tEnd - tStart) / 60)
-  X_test = make_test()
+  X_test = make_input(test_fbank)
   result = test(X_test)
   
-  f = open("result.csv", "w+")
+  f = open("result2.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
