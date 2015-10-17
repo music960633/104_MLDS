@@ -32,10 +32,10 @@ mu = 1.0
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
 w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(128)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(128)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256) ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
 b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
 parameters = [w1, w2, w3, b1, b2, b3]
 
@@ -66,6 +66,12 @@ def init():
   print "generating phone - index mapping"
   map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
   map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
+
+def change_train_data():
+  global train_inst, train_fbank
+  print "changing training data"
+  train_inst, train_fbank = readdata.get_small_train_fbank()
+
 
 def make_batch(size, num):
   global train_inst, train_fbank
@@ -142,7 +148,7 @@ def validate():
       correct += 1
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
-  return percentage > 0.7
+  return percentage > 0.6
 
 def run():
   global batch_size, batch_num
@@ -152,35 +158,42 @@ def run():
   tStart = time.time()
   
   init()
-
-  print "train data: f (0.3 million)"
-  print "eta = ", eta
-  print "mu = eta / ((i+1) ** 0.5)"
-  print "batch_size = ", batch_size
-  print "batch_num = ", batch_num
-  print "3 layers: 69-128-128-48"
+  
+  # training information
+  f = open("cost.txt", "w+")
+  f.write("train data: small + change data")
+  f.write("eta =" % eta)
+  f.write("mu = eta / ((i+1) ** 0.5)")
+  f.write("batch_size =" % batch_size)
+  f.write("batch_num =" % batch_num)
+  f.write("3 layers: 69-256-256-48")
+  
   print "start training"
   
-  f = open("cost.txt", "w+")
-  for i in range(1, 10000):
+  it = 1
+  while True:
     cost = 0
-    mu = eta / ((i + 1) ** 0.5)
+    mu = eta / ((it + 1) ** 0.5)
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
-    print i, " cost: ", cost
-    f.write("%d, cost: %f\n" % (i, cost))
-    if (i % 10 == 0) and validate(): 
-       break
+    print it, " cost: ", cost
+    f.write("%d, cost: %f\n" % (it, cost))
+    if (it % 10 == 0):
+       if validate(): 
+         break
+       change_train_data()
+    it += 1
 
-  f.close()
   tEnd = time.time()
-  print "It cost %f mins" % ((tEnd - tStart) / 60)
+  f.write("It cost %f mins" % ((tEnd - tStart) / 60))
+  f.close()
+  
   X_test = make_input(test_fbank)
   result = test(X_test)
   
-  f = open("result2.csv", "w+")
+  f = open("result_music960633_2.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
