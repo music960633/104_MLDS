@@ -115,16 +115,16 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  eta = 0.04
+  eta = 0.01
   tStart = time.time()
-  print "train data: all"
+  print "train data: f (0.3 million)"
   print "eta = ", eta
   print "mu = eta / ((i+1) ** 0.5)"
   print "batch_size = ", batch_size
   print "batch_num = ", batch_num
   print "3 layers: 69-256-256-48"
   print "start training"
-  for i in range(500):
+  for i in range(5):
     cost = 0
     mu = eta / ((i + 1) ** 0.5)
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
