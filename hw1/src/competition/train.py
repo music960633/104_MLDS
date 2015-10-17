@@ -3,6 +3,7 @@ import theano.tensor as T
 import numpy
 import random
 import re
+import time
 from itertools import izip
 
 import readdata
@@ -20,8 +21,8 @@ map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
 map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
 
 # batch size and number
-batch_size = 128
-batch_num = 1000
+batch_size = 256
+batch_num = 1024
 
 # learning rate
 mu = 1.0
@@ -29,11 +30,11 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(128)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(128)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(128)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(128)], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(256)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(48) ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
 b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
 parameters = [w1, w2, w3, b1, b2, b3]
 
@@ -114,22 +115,26 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.01
-  print "start training"
-  print "mu = ", mu
-  print "mu -= 0.00001"
+  eta = 0.01
+  tStart = time.time()
+  print "train data: f (0.3 million)"
+  print "eta = ", eta
+  print "mu = eta / ((i+1) ** 0.5)"
   print "batch_size = ", batch_size
   print "batch_num = ", batch_num
-  for i in range(250):
+  print "3 layers: 69-256-256-48"
+  print "start training"
+  for i in range(5):
     cost = 0
-    mu -= 0.00001
+    mu = eta / ((i + 1) ** 0.5)
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
     print i, " cost: ", cost
-    if cost <= 0.15: break
-
+    if cost <= 0.25: break
+  tEnd = time.time()
+  print "It cost %f mins" % ((tEnd - tStart) / 60)
   X_test = make_test()
   result = test(X_test)
   
