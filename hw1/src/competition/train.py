@@ -7,10 +7,6 @@ import time
 
 import readdata
 
-# random function
-def myRand(mn, mx):
-   return mn + (random.random() * (mx - mn))
-
 # raw data
 train_inst  = []
 train_fbank = []
@@ -29,14 +25,14 @@ batch_num = 1024
 mu = 1.0
 
 # neuron variable declaration
-x     = T.matrix("input"    , dtype="float32")
-y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(69) ] for i in range(150)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(150)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.1, 0.1) for i in range(150)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(150)], dtype="float32"))
-b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
+x     = T.matrix("input")
+y_hat = T.matrix("reference")
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
@@ -80,31 +76,19 @@ def make_batch(size, num):
   X_ret = []
   Y_ret = []
   for i in range(num):
-    X_batch = [[] for i in range(69)]
-    Y_batch = [[] for i in range(48)]
-    for j in range(size):
-      # random select
-      idx = int(random.random() * data_size)
-      for k in range(69):
-        X_batch[k] += [train_fbank[idx][k]]
-      for k in range(48):
-        Y_batch[k] += [numpy.float32(1) if map_inst_48[train_inst[idx]] == map_idx_48[k] else numpy.float32(0)]
+    # random select
+    idx = [int(random.random() * data_size) for j in range(size)]
+    # make batch
+    X_batch = [[train_fbank[row][idx[j]] for j in range(size)] for row in range(69)]
+    Y_batch = [[(1.0 if map_inst_48[train_inst[idx[j]]] == map_idx_48[row] else 0.0) for j in range(size)] for row in range(48)]
     X_ret += [X_batch]
     Y_ret += [Y_batch]
   return X_ret, Y_ret
 
-# temporarily make test = train
-def make_input(fbank):
-  input_fbank = [[] for i in range(69)]
-  for i in range(len(fbank)):
-    for k in range(69):
-      input_fbank[k] += [fbank[i][k]]
-  return input_fbank
-
 # update function
 def updateFunc(param, grad):
   global mu
-  param_updates = [(p, p - numpy.float32(mu) * g) for p, g in zip(param, grad)]
+  param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
   return param_updates
 
 # cost function
@@ -139,8 +123,7 @@ def match(arr):
 def validate():
   global map_inst_48, map_inst_48_39
   valid_inst, valid_fbank = readdata.get_small_train_fbank()
-  valid_input = make_input(valid_fbank)
-  valid_result = test(valid_input)
+  valid_result = test(valid_fbank)
   data_size = len(valid_inst)
   correct = 0
   for i in range(data_size):
@@ -148,7 +131,7 @@ def validate():
       correct += 1
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
-  return percentage > 0.6
+  return percentage > 0.4
 
 def run():
   global batch_size, batch_num
@@ -179,7 +162,8 @@ def run():
     print it, " cost: ", cost
     f.write("%d, cost: %f\n" % (it, cost))
     if (it % 10 == 0):
-       validate()
+       if validate():
+         break
        change_train_data()
     it += 1
     mu *= 0.9999
@@ -188,10 +172,9 @@ def run():
   f.write("It cost %f mins" % ((tEnd - tStart) / 60))
   f.close()
   
-  X_test = make_input(test_fbank)
-  result = test(X_test)
+  result = test(test_fbank)
   
-  f = open("result/result_music960633_2.csv", "w+")
+  f = open("result/result_music960633_3.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))

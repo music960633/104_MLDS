@@ -7,13 +7,14 @@ def get_train_fbank():
   # filename = "train.ark"
   f = open(filename)
   train_inst = []
-  train_fbank = []
+  train_fbank = [[] for i in 69]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
-    train_fbank += [[numpy.float32(x) for x in s[1:]]]
+    for i in range(69):
+      train_fbank[i] += [float(s[i+1])]
   f.close()
   return train_inst, train_fbank
 
@@ -23,13 +24,14 @@ def get_small_train_fbank():
              + ".ark"
   f = open(filename)
   train_inst = []
-  train_fbank = []
+  train_fbank = [[] for i in range(69)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
-    train_fbank += [[numpy.float32(x) for x in s[1:]]]
+    for i in range(69):
+      train_fbank[i] += [float(s[i+1])]
   f.close()
   return train_inst, train_fbank
 
@@ -38,13 +40,14 @@ def get_test_fbank():
   # filename = "test.ark"
   f = open(filename)
   test_inst = []
-  test_fbank = []
+  test_fbank = [[] for i in range(69)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     test_inst += [s[0]]
-    test_fbank += [[numpy.float32(x) for x in s[1:]]]
+    for i in range(69):
+      test_fbank[i] += [float(s[i+1])]
   f.close()
   return test_inst, test_fbank
 
