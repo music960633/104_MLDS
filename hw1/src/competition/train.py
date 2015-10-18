@@ -7,10 +7,6 @@ import time
 
 import readdata
 
-# random function
-def myRand(mn, mx):
-   return mn + (random.random() * (mx - mn))
-
 # raw data
 train_inst  = []
 train_fbank = []
@@ -31,12 +27,12 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-w1    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(69) ] for i in range(150)]))
-w2    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(150)]))
-w3    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(48) ]))
-b1    = theano.shared(numpy.array([myRand(-0.1, 0.1) for i in range(150)]))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(150)]))
-b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ]))
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
