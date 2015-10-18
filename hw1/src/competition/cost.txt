@@ -1,0 +1,25 @@
+train data: small + change data
+mu = 0
+batch_size = 128
+batch_num = 1024
+3 layers: 69-150-150-481, cost: 0.981016
+2, cost: 0.919192
+3, cost: 0.902137
+4, cost: 0.897128
+5, cost: 0.866562
+6, cost: 0.843065
+7, cost: 0.830877
+8, cost: 0.823320
+9, cost: 0.811801
+10, cost: 0.806034
+11, cost: 0.796712
+12, cost: 0.790019
+13, cost: 0.786163
+14, cost: 0.778175
+15, cost: 0.773768
+16, cost: 0.770282
+17, cost: 0.767092
+18, cost: 0.767814
+19, cost: 0.771476
+20, cost: 0.765154
+It cost 6.986192 mins
