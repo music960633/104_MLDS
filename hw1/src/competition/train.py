@@ -31,11 +31,11 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input"    , dtype="float32")
 y_hat = T.matrix("reference", dtype="float32")
-w1    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(69) ] for i in range(256)], dtype="float32"))
-w2    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(256)], dtype="float32"))
-w3    = theano.shared(numpy.matrix([[myRand(-0.5, 0.5) for j in range(256)] for i in range(48) ], dtype="float32"))
-b1    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
-b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(256)], dtype="float32"))
+w1    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(69) ] for i in range(150)], dtype="float32"))
+w2    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(150)], dtype="float32"))
+w3    = theano.shared(numpy.matrix([[myRand(-0.1, 0.1) for j in range(150)] for i in range(48) ], dtype="float32"))
+b1    = theano.shared(numpy.array([myRand(-0.1, 0.1) for i in range(150)], dtype="float32"))
+b2    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(150)], dtype="float32"))
 b3    = theano.shared(numpy.array([myRand(-0.5, 0.5) for i in range(48) ], dtype="float32"))
 parameters = [w1, w2, w3, b1, b2, b3]
 
@@ -154,7 +154,7 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  eta = 0.02
+  mu = 0.0001
   tStart = time.time()
   
   init()
@@ -162,18 +162,16 @@ def run():
   # training information
   f = open("cost.txt", "w+")
   f.write("train data: small + change data\n")
-  f.write("eta = %d\n" % eta)
-  f.write("mu = eta / ((i+1) ** 0.5)")
+  f.write("mu = %d\n" % mu)
   f.write("batch_size = %d\n" % batch_size)
   f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-256-256-48")
+  f.write("3 layers: 69-150-150-48")
   
   print "start training"
   
   it = 1
-  while True:
+  while it <= 1000:
     cost = 0
-    mu = eta / ((it + 1) ** 0.5)
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
@@ -181,10 +179,10 @@ def run():
     print it, " cost: ", cost
     f.write("%d, cost: %f\n" % (it, cost))
     if (it % 10 == 0):
-       if validate(): 
-         break
+       validate()
        change_train_data()
     it += 1
+    mu *= 0.9999
 
   tEnd = time.time()
   f.write("It cost %f mins" % ((tEnd - tStart) / 60))

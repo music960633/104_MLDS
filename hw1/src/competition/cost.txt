@@ -1,5 +1,0 @@
-train data: small + change data
-eta = 0
-mu = eta / ((i+1) ** 0.5)batch_size = 128
-batch_num = 1024
-3 layers: 69-256-256-481, cost: 1.010008
