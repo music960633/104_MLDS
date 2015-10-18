@@ -1,2 +1,5 @@
 *.swp
-*/data/
+*.pyc
+*.wav
+*.ark
+*.lab

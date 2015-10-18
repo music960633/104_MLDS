@@ -1,9 +1,26 @@
 import re
 import numpy
+import random
 
 def get_train_fbank():
   filename = "../../data/MLDS_HW1_RELEASE_v1/fbank/train.ark"
   # filename = "train.ark"
+  f = open(filename)
+  train_inst = []
+  train_fbank = []
+  while True:
+    s = f.readline()
+    if s == "": break
+    s = s.strip().split(' ')
+    train_inst += [s[0]]
+    train_fbank += [[numpy.float32(x) for x in s[1:]]]
+  f.close()
+  return train_inst, train_fbank
+
+def get_small_train_fbank():
+  filename = "../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_" \
+             + str(int(random.random() * 100)) \
+             + ".ark"
   f = open(filename)
   train_inst = []
   train_fbank = []
