@@ -18,7 +18,7 @@ map_idx_48  = {}
 map_48_idx  = {}
 
 # batch size and number
-batch_size = 128
+batch_size = 256
 batch_num = 1024
 
 # learning rate
@@ -27,11 +27,11 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
-w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
-b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
-b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(256)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
 b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 
@@ -85,11 +85,25 @@ def make_batch(size, num):
     Y_ret += [Y_batch]
   return X_ret, Y_ret
 
+#movement = 0
+momentum = 0.9
+lamb = 0.5
 # update function
 def updateFunc(param, grad):
-  global mu
-  param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
+  global mu, lamb, momentum, movement
+  param_updates = []
+  for p, g in zip(param, grad):
+    movement = theano.shared(0.)
+    movement = (lamb * movement) - mu * g
+    param_updates += [(p, p + movement)]
   return param_updates
+  """
+    updates = []
+    param_update = theano.shared(p.get_value()*0., broadcastable=p.broadcastable)
+    updates.append((p, p - mu * param_update))
+    updates.append((param_update, momentum * param_update + (1. - momentum) * g))
+  return updates
+  """
 
 # cost function
 cost = T.sum((y - y_hat) ** 2) / batch_size
@@ -131,24 +145,30 @@ def validate():
       correct += 1
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
-  return percentage > 0.4
+  #return percentage > 0.6
 
 def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.0001
+  global lamb, movement
+  movement = 0
+  lamb = 0.9
+  mu = 0.01
   tStart = time.time()
   
   init()
   
   # training information
-  f = open("cost.txt", "w+")
+  f = open("cost/greenli/cost_momentum_1.txt", "w+")
   f.write("train data: small + change data\n")
+  f.write("momentum\n")
+  f.write("lambda = %f\n" % lamb)
   f.write("mu = %d\n" % mu)
+  f.write("mu *= 0.9999")
   f.write("batch_size = %d\n" % batch_size)
   f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-150-150-48")
+  f.write("3 layers: 69-256-256-48")
   
   print "start training"
   
@@ -162,8 +182,7 @@ def run():
     print it, " cost: ", cost
     f.write("%d, cost: %f\n" % (it, cost))
     if (it % 10 == 0):
-       if validate():
-         break
+       validate()
        change_train_data()
     it += 1
     mu *= 0.9999
@@ -174,7 +193,7 @@ def run():
   
   result = test(test_fbank)
   
-  f = open("result/result_music960633_3.csv", "w+")
+  f = open("result/greenli/momentum_1.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
