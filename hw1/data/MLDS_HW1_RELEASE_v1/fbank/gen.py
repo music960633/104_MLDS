@@ -19,7 +19,7 @@ def gen_train_fbank():
     print "generating", filename, "..."
     f = open(filename, "w+")
     for j in range(100000):
-      idx = int(random.random() * data_size)
+      idx = random.randint(0, data_size-1)
       f.write(data[idx])
     f.close()
 

@@ -20,7 +20,7 @@ def get_train_fbank():
 
 def get_small_train_fbank():
   filename = "../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_" \
-             + str(int(random.random() * 100)) \
+             + str(random.randint(0, 99)) \
              + ".ark"
   f = open(filename)
   train_inst = []

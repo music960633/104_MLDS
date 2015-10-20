@@ -19,28 +19,40 @@ map_48_idx  = {}
 
 # batch size and number
 batch_size = 128
-batch_num = 1024
+batch_num = 512
 
 # learning rate
-mu = 1.0
+mu = 0.001
+decay = 0.9999
+
+# momentum
+momentum = 0.0
 
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
-w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
-b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
-b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(514)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(514)] for i in range(514)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(514)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(514)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(514)]))
 b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
-a1 = 1 / (1 + T.exp(-z1))
+a1 = 1.0 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
-a2 = 1 / (1 + T.exp(-z2))
+a2 = 1.0 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = 1 / (1 + T.exp(-z3))
+mean = T.sum(T.exp(z3), axis=0)
+y  = T.exp(z3) / mean.dimshuffle('x', 0)
+
+# cost function
+cost = T.sum((y - y_hat) ** 2) / batch_size
+
+# gradient function
+gradients = T.grad(cost, parameters)
+prev_grad = None
 
 def init():
   print "initializing..."
@@ -77,7 +89,7 @@ def make_batch(size, num):
   Y_ret = []
   for i in range(num):
     # random select
-    idx = [int(random.random() * data_size) for j in range(size)]
+    idx = [random.randint(0, data_size-1) for j in range(size)]
     # make batch
     X_batch = [[train_fbank[row][idx[j]] for j in range(size)] for row in range(69)]
     Y_batch = [[(1.0 if map_inst_48[train_inst[idx[j]]] == map_idx_48[row] else 0.0) for j in range(size)] for row in range(48)]
@@ -87,15 +99,11 @@ def make_batch(size, num):
 
 # update function
 def updateFunc(param, grad):
-  global mu
-  param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
+  global mu, momentum, prev_grad
+  # prev_grad = [momentum * g1 + mu * g2 for g1, g2 in zip(prev_grad, grad)] if prev_grad != None \
+  #      else [mu * g2 for g2 in grad]
+  param_updates = [(p, p - g) for p, g in zip(param, grad)]
   return param_updates
-
-# cost function
-cost = T.sum((y - y_hat) ** 2) / batch_size
-
-# gradient function
-gradients = T.grad(cost, parameters)
 
 # training function
 train = theano.function(
@@ -131,13 +139,12 @@ def validate():
       correct += 1
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
-  return percentage > 0.4
+  return percentage > 0.65
 
 def run():
   global batch_size, batch_num
   global test_inst
-  global mu
-  mu = 0.0001
+  global mu, decay, momentum
   tStart = time.time()
   
   init()
@@ -145,10 +152,11 @@ def run():
   # training information
   f = open("cost.txt", "w+")
   f.write("train data: small + change data\n")
-  f.write("mu = %d\n" % mu)
+  f.write("mu = %f, decay = %f\n" % (mu, decay))
+  f.write("activation function: ReLU\n")
   f.write("batch_size = %d\n" % batch_size)
   f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-150-150-48")
+  f.write("3 layers: 69-256-256-48\n")
   
   print "start training"
   
@@ -161,12 +169,12 @@ def run():
     cost /= batch_num
     print it, " cost: ", cost
     f.write("%d, cost: %f\n" % (it, cost))
-    if (it % 10 == 0):
+    if (it % 20 == 0):
        if validate():
          break
        change_train_data()
     it += 1
-    mu *= 0.9999
+    mu *= decay
 
   tEnd = time.time()
   f.write("It cost %f mins" % ((tEnd - tStart) / 60))
@@ -174,7 +182,7 @@ def run():
   
   result = test(test_fbank)
   
-  f = open("result/result_music960633_3.csv", "w+")
+  f = open("result/result_music960633_5.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
