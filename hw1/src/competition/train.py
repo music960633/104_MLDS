@@ -153,7 +153,7 @@ def run():
   global mu
   global lamb, movement
   movement = 0
-  lamb = 0.9
+  lamb = 0.5
   mu = 0.01
   tStart = time.time()
   
