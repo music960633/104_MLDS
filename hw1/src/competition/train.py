@@ -36,11 +36,13 @@ b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
-a1 = 1 / (1 + T.exp(-z1))
+#a1 = 1 / (1 + T.exp(-z1))
+a1 = T.clip(z1, 0, 30)
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
-a2 = 1 / (1 + T.exp(-z2))
+a2 = T.clip(z2, 0, 30)
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = 1 / (1 + T.exp(-z3))
+mean = T.sum(T.exp(z3), axis=0)
+y  = T.exp(z3) / mean.dimshuffle('x', 0)
 
 def init():
   print "initializing..."
@@ -160,7 +162,7 @@ def run():
   init()
   
   # training information
-  f = open("cost/greenli/cost_momentum_1.txt", "w+")
+  f = open("cost/greenli/cost_momentum_5.txt", "w+")
   f.write("train data: small + change data\n")
   f.write("momentum\n")
   f.write("lambda = %f\n" % lamb)
@@ -168,12 +170,12 @@ def run():
   f.write("mu *= 0.9999")
   f.write("batch_size = %d\n" % batch_size)
   f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-256-256-48")
+  f.write("3 layers: 69-256-256-48\n")
   
   print "start training"
   
   it = 1
-  while it <= 1000:
+  while it <= 500:
     cost = 0
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
@@ -193,7 +195,7 @@ def run():
   
   result = test(test_fbank)
   
-  f = open("result/greenli/momentum_1.csv", "w+")
+  f = open("result/greenli/momentum_5.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
