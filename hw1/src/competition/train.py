@@ -27,6 +27,7 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
+<<<<<<< Updated upstream
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
 w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
 w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
@@ -41,6 +42,33 @@ z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
 y  = 1 / (1 + T.exp(-z3))
+=======
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(256)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
+w4    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
+w5    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
+b4    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
+b5    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
+parameters = [w1, w2, w3, w4, w5, b1, b2, b3, b4, b5]
+
+z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
+a1 = 1 / (1 + T.exp(-z1))
+#a1 = T.clip(z1, 0, 30)
+z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
+#a2 = T.clip(z2, 0, 30)
+a2 = 1 / (1 + T.exp(-z2))
+z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
+a3 = 1 / (1 + T.exp(-z3))
+z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
+a4 = 1 / (1 + T.exp(-z4))
+z5 = T.dot(w5, a4) + b5.dimshuffle(0, 'x')
+mean = T.sum(T.exp(z5), axis=0)
+y  = T.exp(z5) / mean.dimshuffle('x', 0)
+>>>>>>> Stashed changes
 
 def init():
   print "initializing..."
@@ -143,17 +171,33 @@ def run():
   init()
   
   # training information
+<<<<<<< Updated upstream
   f = open("cost.txt", "w+")
   f.write("train data: small + change data\n")
   f.write("mu = %d\n" % mu)
   f.write("batch_size = %d\n" % batch_size)
   f.write("batch_num = %d\n" % batch_num)
   f.write("3 layers: 69-150-150-48")
+=======
+  f = open("cost/greenli/cost_momentum_6.txt", "w+")
+  f.write("train data: small + change data\n")
+  f.write("momentum\n")
+  f.write("lambda = %f\n" % lamb)
+  f.write("mu = %f\n" % mu)
+  f.write("mu *= 0.9999")
+  f.write("batch_size = %d\n" % batch_size)
+  f.write("batch_num = %d\n" % batch_num)
+  f.write("3 layers: 69-256-256-256-256-48\n")
+>>>>>>> Stashed changes
   
   print "start training"
   
   it = 1
+<<<<<<< Updated upstream
   while it <= 1000:
+=======
+  while it <= 600:
+>>>>>>> Stashed changes
     cost = 0
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
@@ -174,7 +218,11 @@ def run():
   
   result = test(test_fbank)
   
+<<<<<<< Updated upstream
   f = open("result/result_music960633_3.csv", "w+")
+=======
+  f = open("result/greenli/momentum_6.csv", "w+")
+>>>>>>> Stashed changes
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
