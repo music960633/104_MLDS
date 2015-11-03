@@ -3,7 +3,7 @@ import numpy
 import random
 
 def get_train_post():
-  filename = "../../data/posteriorgram/train.post"
+  filename = "../../data/posteriorgram/train1.post"
   # filename = "../../data/MLDS_HW1_RELEASE_v1/fbank/train.ark"
   f = open(filename)
   train_inst = []
@@ -19,7 +19,7 @@ def get_train_post():
   return train_inst, train_fbank
 
 def get_test_post():
-  filename = "../../data/posteriorgram/test.post"
+  filename = "../../data/posteriorgram/test1.post"
   # filename = "test.ark"
   f = open(filename)
   test_inst = []
@@ -47,7 +47,7 @@ def get_map_48_39():
   return map_48_39
 
 def get_map_inst_48():
-  filename = "../../data/MLDS_HW1_RELEASE_v1/label/train.lab"
+  filename = "../../data/MLDS_HW1_RELEASE_v1/label/train1.lab"
   f = open(filename)
   map_inst_48 = {}
   while True:
