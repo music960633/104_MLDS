@@ -2,25 +2,40 @@ import re
 import numpy
 import random
 
-def get_train_post():
-  filename = "../../data/posteriorgram/train1.post"
-  # filename = "../../data/MLDS_HW1_RELEASE_v1/fbank/train.ark"
+def get_train_data():
+  filename = "../../data/posteriorgram/train.post"
   f = open(filename)
   train_inst = []
-  train_fbank = [[] for i in range(48)]
+  train_data = [[] for i in range(48)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
     for i in range(48):
-      train_fbank[i] += [float(s[i+1])]
+      train_data[i] += [float(s[i+1])]
   f.close()
-  return train_inst, train_fbank
+  return train_inst, train_data
+
+def get_small_train_data():
+  filename = "../../data/posteriorgram/small_data/train_" \
+             + str(random.randint(1, 3695)) \
+             + ".post"
+  f = open(filename)
+  train_inst = []
+  train_data = [[] for i in range(48)]
+  while True:
+    s = f.readline()
+    if s == "": break
+    s = s.strip().split(' ')
+    train_inst += [s[0]]
+    for i in range(48):
+      train_data[i] += [float(s[i+1])]
+  f.close()
+  return train_inst, train_data
 
 def get_test_post():
   filename = "../../data/posteriorgram/test1.post"
-  # filename = "test.ark"
   f = open(filename)
   test_inst = []
   test_fbank = [[] for i in range(48)]
@@ -47,7 +62,7 @@ def get_map_48_39():
   return map_48_39
 
 def get_map_inst_48():
-  filename = "../../data/MLDS_HW1_RELEASE_v1/label/train1.lab"
+  filename = "../../data/MLDS_HW1_RELEASE_v1/label/train.lab"
   f = open(filename)
   map_inst_48 = {}
   while True:
