@@ -48,7 +48,6 @@ def gen_data(min_length=MIN_LENGTH, max_length=MAX_LENGTH):
     x_seq[np.random.randint(length/2, length), 1] = 1
     # Multiply and sum the dimensions of x_seq to get the target value
     y_hat = np.sum(x_seq[:, 0]*x_seq[:, 1])
-    print x_seq, y_hat
     return x_seq, y_hat
 
 # what can we get from gen_data()
@@ -104,7 +103,7 @@ rnn_train = theano.function(
   updates=MyUpdate(parameters,gradients)
 )
 
-for i in range(5):
+for i in range(10000):
   x_seq, y_hat = gen_data()
   print "iteration:", i, "cost:",  rnn_train(x_seq,y_hat)
 

@@ -23,7 +23,7 @@ map_48_idx  = {}
 mu = 0.1
 
 # parameter
-N_HIDDEN = 100
+N_HIDDEN = 128
 N_INPUT = 48
 N_OUTPUT = 48
 # neuron variable declaration
@@ -57,9 +57,9 @@ def init():
   map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
   map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
 
-def gen_data():
+def gen_data(idx):
   global  map_inst_48
-  train_inst, train_fbank = readdata.get_small_train_data()
+  train_inst, train_fbank = readdata.get_small_train_data(idx)
   X_seq = []
   Y_hat_seq = []
   i = 0
@@ -68,7 +68,7 @@ def gen_data():
     X_seq += [[train_fbank[row][i] for row in range(N_INPUT)]]
     Y_hat_seq += [[(1.0 if map_inst_48[train_inst[i]] == map_idx_48[row] else 0.0) for row in range(N_OUTPUT)]]
     i = i + 1
-  return X_seq, Y_hat_seq
+  return X_seq, Y_hat_seq, size
 
 
 # update function
@@ -91,10 +91,12 @@ def momentum (param, grad):
 def sigmoid(z):
   return 1/(1 + T.exp(-z))
 
+def softmax(z):
+  return T.exp(z) / T.sum(T.exp(z))
+
 def step (x_t, a_tm1, y_tm1):
   a_t = sigmoid(T.dot(x_t, Wi) + T.dot(a_tm1, Wh) + bh)
-  y_t = T.nnet.softmax(T.dot(a_t, Wo) + bo)
-  y_t = y_t[0]
+  y_t = softmax(T.dot(a_t, Wo) + bo)
   return a_t, y_t
 
 [a_seq, y_seq],_ = theano.scan(
@@ -106,7 +108,7 @@ def step (x_t, a_tm1, y_tm1):
 y_seq_last = y_seq[-1][0]
 
 # cost function
-cost = T.sum((y_seq - y_hat_seq) ** 2) / 2
+cost = T.sum((y_seq - y_hat_seq) ** 2)
 
 # gradient function
 gradients = T.grad(cost, parameters)
@@ -122,8 +124,30 @@ rnn_train = theano.function(
 # testing function
 test = theano.function(
     inputs = [x_seq],
-    outputs = y_seq_last
+    outputs = y_seq
 )
+
+def match(arr):
+  global map_idx_48, map_48_39
+  idx = 0
+  mx = arr[0]
+  for i in range(len(arr)):
+    if arr[i] > mx:
+      idx = i
+      mx = arr[i]
+  return map_48_39[map_idx_48[idx]]
+
+def validate():
+  global map_inst_48, map_inst_48_39
+  valid_inst, valid_fbank = readdata.get_small_train_data()
+  valid_result = test(valid_fbank)
+  data_size = len(valid_inst)
+  correct = 0
+  for i in range(data_size):
+    if map_48_39[map_inst_48[valid_inst[i]]] == match([valid_result[j][i] for j in range(N_INPUT)]):
+      correct += 1
+  percentage = float(correct) / data_size
+  print "validate:", correct, "/", data_size, "(", percentage, ")" 
 
 def run():
   global test_inst
@@ -132,7 +156,7 @@ def run():
   global x_seq, y_hat_seq
   movement = 0
   lamb = 0.5
-  mu = 1
+  mu = 0.01
   tStart = time.time()
   
   init()
@@ -140,26 +164,28 @@ def run():
   # training information
   f = open("cost.txt", "w+")
   print "start training"
-  
   it = 1
-  x_seq, y_hat_seq = gen_data()
-  while it <= 100:
-    cost = rnn_train(x_seq, y_hat_seq)
-    print it, " cost: ", cost
-    #f.write("%d, cost: %f\n" % (it, cost))
+  while it <= 1000:
+    total_cost = 0
+    for i in range(3695):
+      x_seq, y_hat_seq , sentence_size = gen_data(i)
+      cost = rnn_train(x_seq, y_hat_seq) / float(sentence_size)
+      total_cost += cost
+      print i, "cost: ", cost
+    total_cost /= float(3695)
+    print it, "total cost: ", total_cost
+    f.write("iteration %s, cost %s" %(i, total_cost))
+    a_0.set_value(np.zeros(N_HIDDEN))
+    y_0.set_value(np.zeros(N_OUTPUT))
     it += 1
     mu *= 0.9999
-    if it % 10 == 0:
-      x_seq, y_hat_seq = gen_data()
 
 
   tEnd = time.time()
   print "It cost %f mins" % ((tEnd - tStart) / 60)
-""" 
   result = test(test_fbank)
   
   f = open("result.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
-"""

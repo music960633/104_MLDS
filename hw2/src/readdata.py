@@ -17,9 +17,9 @@ def get_train_data():
   f.close()
   return train_inst, train_data
 
-def get_small_train_data():
+def get_small_train_data(idx):
   filename = "../../data/posteriorgram/small_data/train_" \
-             + str(random.randint(1, 3695)) \
+             + str(idx) \
              + ".post"
   f = open(filename)
   train_inst = []
@@ -35,7 +35,7 @@ def get_small_train_data():
   return train_inst, train_data
 
 def get_test_post():
-  filename = "../../data/posteriorgram/test1.post"
+  filename = "../../data/posteriorgram/test.post"
   f = open(filename)
   test_inst = []
   test_fbank = [[] for i in range(48)]
