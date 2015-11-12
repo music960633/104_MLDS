@@ -4,7 +4,6 @@ import numpy as np
 import random
 import re
 import time
-from itertools import izip
 
 
 import readdata
@@ -74,7 +73,7 @@ def gen_data(idx):
 # update function
 def updateFunc(param, grad):
   global mu
-  parameters_updates = [(p,p - mu * g) for p,g in izip(parameters,gradients) ] 
+  parameters_updates = [(p,p - mu * g) for p,g in zip(parameters,gradients) ] 
   return parameters_updates
 
 momentum = 0.9
