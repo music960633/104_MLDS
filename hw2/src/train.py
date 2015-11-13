@@ -71,14 +71,13 @@ def updateFunc(param, grad):
   parameters_updates = [(p, p - mu * g) for p,g in zip(parameters,gradients) ] 
   return parameters_updates
 
-momentum = 0.9
 lamb = 0.5
 def momentum (param, grad):
   global mu, lamb, momentum, movement
   param_updates = []
   for p, g in zip(param, grad):
     movement = theano.shared(0.)
-    movement = (lamb * movement) - mu * g
+    movement = (lamb * movement) - mu * T.clip(g, -10, 10)
     param_updates += [(p, p + movement)]
   return param_updates
 
@@ -88,18 +87,17 @@ def sigmoid(z):
 def softmax(z):
   return T.exp(z) / T.sum(T.exp(z))
 
-def step (x_t, a_tm1, y_tm1):
-  a_t = sigmoid(T.dot(x_t, Wi) + T.dot(a_tm1, Wh) + bh)
-  y_t = softmax(T.dot(a_t, Wo) + bo)
-  # y_t = sigmoid(T.dot(a_t, Wo) + bo)
-  return a_t, y_t
+def step (z_t, a_tm1):
+  return sigmoid(z_t + T.dot(a_tm1, Wh) + bh)
 
-[a_seq, y_seq], _ = theano.scan(
+z_seq = T.dot(x_seq, Wi)
+a_seq, _ = theano.scan(
   step,
-  sequences = x_seq,
-  outputs_info = [a_0, y_0],
+  sequences = z_seq,
+  outputs_info = a_0,
   truncate_gradient = -1
 )
+y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
 
 # cost function
 cost = T.sum(-T.log(y_seq) * y_hat_seq)
@@ -112,8 +110,8 @@ gradients = T.grad(cost, parameters)
 rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
     outputs = [cost, y_seq],
-    updates = updateFunc(parameters, gradients)
-    # updates = momentum(parameters, gradients)
+    #updates = updateFunc(parameters, gradients)
+    updates = momentum(parameters, gradients)
 )
 
 # testing function
@@ -194,7 +192,7 @@ def run():
   global x_seq, y_hat_seq
   movement = 0
   lamb = 0.5
-  mu = 0.01
+  mu = 0.001
   tStart = time.time()
   
   init()
@@ -205,11 +203,11 @@ def run():
   f.write("iteration,cost,accuracy\n")
   f.close()
   it = 1
-  while True:
-    num_file = 100
+  while it < 500:
+    num_file = 200
     total_cost = 0
     total_acc  = 0
-    max_acc = 0
+    max_acc = 0.4
     for i in range(num_file):
       a_0.set_value(np.zeros(N_HIDDEN))
       y_0.set_value(np.zeros(N_OUTPUT))
@@ -229,7 +227,7 @@ def run():
     f.close()
     it += 1
     mu *= 0.9999
-
     if it % 100 == 0 and total_acc > max_acc:
       max_acc = total_acc
       gen_test(it/100)
+  print ((time.time() - tStart) / 60)
