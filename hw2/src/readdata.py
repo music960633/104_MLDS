@@ -2,6 +2,8 @@ import re
 import numpy
 import random
 
+small_train_data_dict = {}
+
 def get_train_data():
   filename = "../../data/posteriorgram/train.post"
   f = open(filename)
@@ -18,9 +20,12 @@ def get_train_data():
   return train_inst, train_data
 
 def get_small_train_data(idx):
+  global small_train_data_dict
   filename = "../../data/posteriorgram/small_data/train_" \
              + str(idx) \
              + ".post"
+  if filename in small_train_data_dict:
+    return small_train_data_dict[filename]
   f = open(filename)
   train_inst = []
   train_data = [[] for i in range(48)]
@@ -32,6 +37,7 @@ def get_small_train_data(idx):
     for i in range(48):
       train_data[i] += [float(s[i+1])]
   f.close()
+  small_train_data_dict[filename] = (train_inst, train_data)
   return train_inst, train_data
 
 def get_test_post():

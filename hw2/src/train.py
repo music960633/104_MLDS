@@ -10,9 +10,9 @@ import readdata
 
 # raw data
 #train_inst  = []
-#train_fbank = []
+#train_post = []
 test_inst   = []
-test_fbank  = []
+test_post  = []
 map_inst_48 = {}
 map_48_39   = {}
 map_idx_48  = {}
@@ -25,6 +25,7 @@ mu = 0.1
 N_HIDDEN = 128
 N_INPUT = 48
 N_OUTPUT = 48
+
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
@@ -39,13 +40,13 @@ parameters = [Wi, bh, Wo, bo, Wh]
 
 def init():
   print "initializing..."
-  global train_inst, train_fbank
-  global test_inst, test_fbank
+  global train_inst, train_post
+  global test_inst, test_post
   global map_inst_48, map_48_39
   global map_idx_48, map_48_idx
   global map_48_char
   print "reading testing data"
-  test_inst , test_fbank  = readdata.get_test_post()
+  test_inst , test_post  = readdata.get_test_post()
   # instance name and phone mapping
   print "reading instance name - phone mapping"
   map_inst_48 = readdata.get_map_inst_48()
@@ -58,13 +59,13 @@ def init():
 
 def gen_data(idx):
   global  map_inst_48
-  train_inst, train_fbank = readdata.get_small_train_data(idx)
+  train_inst, train_post = readdata.get_small_train_data(idx)
   X_seq = []
   Y_hat_seq = []
   i = 0
-  size =  len(train_fbank[0])
+  size =  len(train_post[0])
   while i < size:
-    X_seq += [[train_fbank[row][i] for row in range(N_INPUT)]]
+    X_seq += [[train_post[row][i] for row in range(N_INPUT)]]
     Y_hat_seq += [[(1.0 if map_inst_48[train_inst[i]] == map_idx_48[row] else 0.0) for row in range(N_OUTPUT)]]
     i = i + 1
   return X_seq, Y_hat_seq, size
@@ -182,7 +183,7 @@ def run():
 
   tEnd = time.time()
   print "It cost %f mins" % ((tEnd - tStart) / 60)
-  result = test(test_fbank)
+  result = test(test_post)
   
   f = open("result.csv", "w+")
   f.write("Id,Prediction\n")

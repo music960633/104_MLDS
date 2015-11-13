@@ -14,7 +14,7 @@ def gen_train_fbank():
     temp = s.strip().split(' ')
     temp = temp[0].strip().split('_')
     if temp[-1] == '1':
-      print "generating train_", i , ".post"
+      print "generating train_" + str(i) + ".post"
       if i != 0:
         small_file.close()
         filename = "small_data/train_" + str(i) + ".post"
