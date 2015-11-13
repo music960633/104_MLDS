@@ -84,8 +84,8 @@ def momentum (param, grad):
 def sigmoid(z):
   return 1/(1 + T.exp(-z))
 
-def softmax(z):
-  return T.exp(z) / T.sum(T.exp(z))
+def softmax(zs):
+  return T.exp(zs) / T.sum(T.exp(zs), axis=1).dimshuffle(0, 'x')
 
 def step (z_t, a_tm1):
   return sigmoid(z_t + T.dot(a_tm1, Wh) + bh)
@@ -110,8 +110,8 @@ gradients = T.grad(cost, parameters)
 rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
     outputs = [cost, y_seq],
-    #updates = updateFunc(parameters, gradients)
-    updates = momentum(parameters, gradients)
+    updates = updateFunc(parameters, gradients)
+    #updates = momentum(parameters, gradients)
 )
 
 # testing function
@@ -203,8 +203,8 @@ def run():
   f.write("iteration,cost,accuracy\n")
   f.close()
   it = 1
-  while it < 500:
-    num_file = 200
+  while True:
+    num_file = 100
     total_cost = 0
     total_acc  = 0
     max_acc = 0.4
@@ -230,4 +230,3 @@ def run():
     if it % 100 == 0 and total_acc > max_acc:
       max_acc = total_acc
       gen_test(it/100)
-  print ((time.time() - tStart) / 60)
