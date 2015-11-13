@@ -4,21 +4,6 @@ import random
 
 small_train_data_dict = {}
 
-def get_train_data():
-  filename = "../../data/posteriorgram/train.post"
-  f = open(filename)
-  train_inst = []
-  train_data = [[] for i in range(48)]
-  while True:
-    s = f.readline()
-    if s == "": break
-    s = s.strip().split(' ')
-    train_inst += [s[0]]
-    for i in range(48):
-      train_data[i] += [float(s[i+1])]
-  f.close()
-  return train_inst, train_data
-
 def get_small_train_data(idx):
   global small_train_data_dict
   filename = "../../data/posteriorgram/small_data/train_" \
@@ -28,14 +13,13 @@ def get_small_train_data(idx):
     return small_train_data_dict[filename]
   f = open(filename)
   train_inst = []
-  train_data = [[] for i in range(48)]
+  train_data = []
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
-    for i in range(48):
-      train_data[i] += [float(s[i+1])]
+    train_data += [[float(s[i+1]) for i in range(48)]]
   f.close()
   small_train_data_dict[filename] = (train_inst, train_data)
   return train_inst, train_data
@@ -44,16 +28,15 @@ def get_test_post():
   filename = "../../data/posteriorgram/test.post"
   f = open(filename)
   test_inst = []
-  test_fbank = [[] for i in range(48)]
+  test_data = []
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     test_inst += [s[0]]
-    for i in range(48):
-      test_fbank[i] += [float(s[i+1])]
+    test_data += [[float(s[i+1]) for i in range(48)]]
   f.close()
-  return test_inst, test_fbank
+  return test_inst, test_data
 
 def get_map_48_39():
   filename = "../../data/MLDS_HW1_RELEASE_v1/phones/48_39.map"

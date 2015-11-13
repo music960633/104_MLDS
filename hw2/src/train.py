@@ -9,34 +9,33 @@ import time
 import readdata
 
 # raw data
-#train_inst  = []
-#train_post = []
 test_inst   = []
-test_post  = []
+test_post   = []
 map_inst_48 = {}
 map_48_39   = {}
 map_idx_48  = {}
 map_48_idx  = {}
 
 # learning rate
-mu = 0.1
+mu = 0.001
 
 # parameter
-N_HIDDEN = 128
+N_HIDDEN = 64
 N_INPUT = 48
 N_OUTPUT = 48
 
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
-bo   = theano.shared(np.array ([ random.gauss(0.0, 0.1) for i in range(N_OUTPUT)]))
-bh   = theano.shared(np.array ([ random.gauss(0.0, 0.1) for i in range(N_HIDDEN)]))
+Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wh   = theano.shared(np.matrix([[0.01 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+bo   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
+bh   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
 a_0 = theano.shared(np.zeros(N_HIDDEN))
 y_0 = theano.shared(np.zeros(N_OUTPUT))
 parameters = [Wi, bh, Wo, bo, Wh]
+
 
 def init():
   print "initializing..."
@@ -60,12 +59,11 @@ def init():
 def gen_data(idx):
   global  map_inst_48
   train_inst, train_post = readdata.get_small_train_data(idx)
-  X_seq = []
+  X_seq = train_post
   Y_hat_seq = []
+  size = len(train_post)
   i = 0
-  size =  len(train_post[0])
   while i < size:
-    X_seq += [[train_post[row][i] for row in range(N_INPUT)]]
     Y_hat_seq += [[(1.0 if map_inst_48[train_inst[i]] == map_idx_48[row] else 0.0) for row in range(N_OUTPUT)]]
     i = i + 1
   return X_seq, Y_hat_seq, size
@@ -74,7 +72,7 @@ def gen_data(idx):
 # update function
 def updateFunc(param, grad):
   global mu
-  parameters_updates = [(p,p - mu * g) for p,g in zip(parameters,gradients) ] 
+  parameters_updates = [(p, p - mu * g) for p,g in zip(parameters,gradients) ] 
   return parameters_updates
 
 momentum = 0.9
@@ -97,18 +95,19 @@ def softmax(z):
 def step (x_t, a_tm1, y_tm1):
   a_t = sigmoid(T.dot(x_t, Wi) + T.dot(a_tm1, Wh) + bh)
   y_t = softmax(T.dot(a_t, Wo) + bo)
+  # y_t = sigmoid(T.dot(a_t, Wo) + bo)
   return a_t, y_t
 
-[a_seq, y_seq],_ = theano.scan(
+[a_seq, y_seq], _ = theano.scan(
   step,
   sequences = x_seq,
   outputs_info = [a_0, y_0],
-  truncate_gradient = -1)
-
-y_seq_last = y_seq[-1][0]
+  truncate_gradient = -1
+)
 
 # cost function
-cost = T.sum((y_seq - y_hat_seq) ** 2)
+cost = T.sum(-T.log(y_seq) * y_hat_seq)
+# cost = T.sum((y_seq - y_hat_seq) ** 2)
 
 # gradient function
 gradients = T.grad(cost, parameters)
@@ -116,9 +115,9 @@ gradients = T.grad(cost, parameters)
 # training function
 rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
-    outputs = cost,
-    #updates = updateFunc(parameters, gradients)
-    updates = momentum(parameters, gradients)
+    outputs = [cost, y_seq],
+    updates = updateFunc(parameters, gradients)
+    # updates = momentum(parameters, gradients)
 )
 
 # testing function
@@ -149,6 +148,25 @@ def validate():
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
 
+def argmax(arr):
+  mx = arr[0]
+  idx = 0
+  i = 0
+  for x in arr:
+    if x > mx:
+      mx = x
+      idx = i
+    i = i + 1
+  return idx, mx
+
+def accuracy(y_seq, y_hat_seq):
+  cnt = 0
+  for i in range(len(y_seq)):
+    if y_hat_seq[i][argmax(y_seq[i])[0]] == 1:
+      cnt = cnt + 1
+  return float(cnt) / len(y_seq)
+
+
 def run():
   global test_inst
   global mu
@@ -162,30 +180,38 @@ def run():
   init()
   
   # training information
-  f = open("cost.txt", "w+")
   print "start training"
   it = 1
-  while it <= 1000:
+  while True:
+    num_file = 1
     total_cost = 0
-    for i in range(3695):
+    total_acc  = 0
+    max_acc = 0
+    for i in range(num_file):
+      a_0.set_value(np.zeros(N_HIDDEN))
+      y_0.set_value(np.zeros(N_OUTPUT))
       x_seq, y_hat_seq , sentence_size = gen_data(i)
-      cost = rnn_train(x_seq, y_hat_seq) / float(sentence_size)
+      cost, y_seq = rnn_train(x_seq, y_hat_seq)
+      cost = cost / float(sentence_size)
+      acc = accuracy(y_seq, y_hat_seq)
       total_cost += cost
-      print i, "cost: ", cost
-    total_cost /= float(3695)
-    print it, "total cost: ", total_cost
-    f.write("iteration %s, cost %s" %(i, total_cost))
-    a_0.set_value(np.zeros(N_HIDDEN))
-    y_0.set_value(np.zeros(N_OUTPUT))
+      total_acc += acc
+      # print i, "cost:", cost, "accuracy:", acc
+    
+    total_cost /= float(num_file)
+    total_acc  /= float(num_file)
+    print it, "total cost:", total_cost, "total accuracy:", total_acc
+    f = open("../result/cost.txt", "a+")
+    f.write("iteration %d, cost %f, accuracy %f\n" % (it, total_cost, total_acc))
+    f.close()
     it += 1
     mu *= 0.9999
 
-
-  tEnd = time.time()
-  print "It cost %f mins" % ((tEnd - tStart) / 60)
-  result = test(test_post)
-  
-  f = open("result.csv", "w+")
-  f.write("Id,Prediction\n")
-  for i in range(len(test_inst)):
-    f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
+    if it % 100 == 0 and total_acc > max_acc:
+      max_acc = total_acc
+      result = test(test_post)
+      f = open("../result/result" + str(it/100) + ".csv", "w+")
+      f.write("Id,Prediction\n")
+      for i in range(len(test_inst)):
+        f.write("%s,%s\n" % (test_inst[i], match(result[i])))
+      f.close()
