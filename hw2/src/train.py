@@ -194,7 +194,7 @@ def run():
   global x_seq, y_hat_seq
   movement = 0
   lamb = 0.5
-  mu = 0.01
+  mu = 0.001
   tStart = time.time()
   
   init()
