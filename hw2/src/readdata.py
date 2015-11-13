@@ -3,12 +3,12 @@ import numpy
 import random
 
 small_train_data_dict = {}
+small_test_data_dict = {}
 
 def get_small_train_data(idx):
   global small_train_data_dict
   filename = "../../data/posteriorgram/small_data/train_" \
-             + str(idx) \
-             + ".post"
+             + str(idx) + ".post"
   if filename in small_train_data_dict:
     return small_train_data_dict[filename]
   f = open(filename)
@@ -23,6 +23,26 @@ def get_small_train_data(idx):
   f.close()
   small_train_data_dict[filename] = (train_inst, train_data)
   return train_inst, train_data
+
+def get_small_test_data(idx):
+  global small_train_data_dict
+  filename = "../../data/posteriorgram/small_test/test_" \
+             + str(idx) + ".post"
+  if filename in small_test_data_dict:
+    return small_test_data_dict[filename]
+  f = open(filename)
+  test_inst = []
+  test_data = []
+  while True:
+    s = f.readline()
+    if s == "": break
+    s = s.strip().split(' ')
+    name = s[0].strip().split('_')
+    test_inst = name[0] + "_" + name[1]
+    test_data += [[float(s[i+1]) for i in range(48)]]
+  f.close()
+  small_test_data_dict[filename] = (test_inst, test_data)
+  return test_inst, test_data
 
 def get_test_post():
   filename = "../../data/posteriorgram/test.post"

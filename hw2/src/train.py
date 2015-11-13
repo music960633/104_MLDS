@@ -9,18 +9,16 @@ import time
 import readdata
 
 # raw data
-test_inst   = []
-test_post   = []
 map_inst_48 = {}
 map_48_39   = {}
 map_idx_48  = {}
 map_48_idx  = {}
 
 # learning rate
-mu = 0.001
+mu = 0.0005
 
 # parameter
-N_HIDDEN = 64
+N_HIDDEN = 128
 N_INPUT = 48
 N_OUTPUT = 48
 
@@ -44,8 +42,6 @@ def init():
   global map_inst_48, map_48_39
   global map_idx_48, map_48_idx
   global map_48_char
-  print "reading testing data"
-  test_inst , test_post  = readdata.get_test_post()
   # instance name and phone mapping
   print "reading instance name - phone mapping"
   map_inst_48 = readdata.get_map_inst_48()
@@ -56,8 +52,8 @@ def init():
   map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
   map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
 
-def gen_data(idx):
-  global  map_inst_48
+def get_data(idx):
+  global map_inst_48
   train_inst, train_post = readdata.get_small_train_data(idx)
   X_seq = train_post
   Y_hat_seq = []
@@ -134,7 +130,7 @@ def match(arr):
     if arr[i] > mx:
       idx = i
       mx = arr[i]
-  return map_48_39[map_idx_48[idx]]
+  return map_48_char[map_48_39[map_idx_48[idx]]]
 
 def validate():
   global map_inst_48, map_inst_48_39
@@ -166,6 +162,30 @@ def accuracy(y_seq, y_hat_seq):
       cnt = cnt + 1
   return float(cnt) / len(y_seq)
 
+def trim(s):
+  ret = ""
+  for i in range(len(s)):
+    if i == 0 or s[i] != s[i-1]:
+      ret += s[i]
+  if ret[0] == 'L':
+    ret = ret[1:]
+  if ret[-1] == 'L':
+    ret = ret[:-1]
+  return ret
+
+def gen_test(idx):
+  f = open("../result/result_" + str(idx) + ".csv", "w+")
+  f.write("id,phone_sequence\n")
+  for i in range(592):
+    a_0.set_value(np.zeros(N_HIDDEN))
+    y_0.set_value(np.zeros(N_OUTPUT))
+    test_inst, x_seq = readdata.get_small_test_data(i)
+    result = test(x_seq)
+    seq = ""
+    for j in range(len(result)):
+        seq += match(result[j])
+    f.write("%s,%s\n" % (test_inst, trim(seq)))
+  f.close()
 
 def run():
   global test_inst
@@ -181,37 +201,35 @@ def run():
   
   # training information
   print "start training"
+  f = open("../result/cost.csv", "a+")
+  f.write("iteration,cost,accuracy\n")
+  f.close()
   it = 1
   while True:
-    num_file = 1
+    num_file = 100
     total_cost = 0
     total_acc  = 0
     max_acc = 0
     for i in range(num_file):
       a_0.set_value(np.zeros(N_HIDDEN))
       y_0.set_value(np.zeros(N_OUTPUT))
-      x_seq, y_hat_seq , sentence_size = gen_data(i)
+      x_seq, y_hat_seq, sentence_size = get_data(i*30+1)
       cost, y_seq = rnn_train(x_seq, y_hat_seq)
       cost = cost / float(sentence_size)
       acc = accuracy(y_seq, y_hat_seq)
       total_cost += cost
       total_acc += acc
-      # print i, "cost:", cost, "accuracy:", acc
+      print i, "cost:", cost, "accuracy:", acc
     
     total_cost /= float(num_file)
     total_acc  /= float(num_file)
     print it, "total cost:", total_cost, "total accuracy:", total_acc
-    f = open("../result/cost.txt", "a+")
-    f.write("iteration %d, cost %f, accuracy %f\n" % (it, total_cost, total_acc))
+    f = open("../result/cost.csv", "a+")
+    f.write("%d,%f,%f\n" % (it, total_cost, total_acc))
     f.close()
     it += 1
     mu *= 0.9999
 
     if it % 100 == 0 and total_acc > max_acc:
       max_acc = total_acc
-      result = test(test_post)
-      f = open("../result/result" + str(it/100) + ".csv", "w+")
-      f.write("Id,Prediction\n")
-      for i in range(len(test_inst)):
-        f.write("%s,%s\n" % (test_inst[i], match(result[i])))
-      f.close()
+      gen_test(it/100)
