@@ -13,7 +13,7 @@ def gen_train_fbank():
     if s == "": break
     temp = s.strip().split(' ')
     temp = temp[0].strip().split('_')
-    if temp[-1] == '1':
+    if int(temp[-1]) % 20 == 1:
       print "generating train_" + str(i) + ".post"
       if i != 0:
         small_file.close()
@@ -45,4 +45,4 @@ def gen_test_fbank():
   f.close()
 
 if __name__ == "__main__":
-  gen_test_fbank()
+  gen_train_fbank()

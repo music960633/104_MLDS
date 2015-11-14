@@ -18,18 +18,18 @@ map_48_idx  = {}
 mu = 0.0005
 
 # parameter
-N_HIDDEN = 128
+N_HIDDEN = 256
 N_INPUT = 48
 N_OUTPUT = 48
 
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh   = theano.shared(np.matrix([[0.01 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
-bo   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
-bh   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wh   = theano.shared(np.matrix([[1.0 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+bo   = theano.shared(np.array ([ random.gauss(0.0, 0.0) for i in range(N_OUTPUT)]))
+bh   = theano.shared(np.array ([ random.gauss(0.0, 0.1) for i in range(N_HIDDEN)]))
 a_0 = theano.shared(np.zeros(N_HIDDEN))
 y_0 = theano.shared(np.zeros(N_OUTPUT))
 parameters = [Wi, bh, Wo, bo, Wh]
@@ -84,6 +84,9 @@ def momentum (param, grad):
 def sigmoid(z):
   return 1/(1 + T.exp(-z))
 
+def relu(z):
+  return T.log(1 + T.exp(z))
+
 def softmax(zs):
   return T.exp(zs) / T.sum(T.exp(zs), axis=1).dimshuffle(0, 'x')
 
@@ -97,11 +100,12 @@ a_seq, _ = theano.scan(
   outputs_info = a_0,
   truncate_gradient = -1
 )
-y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+# y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+y_seq = sigmoid(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
 
 # cost function
-cost = T.sum(-T.log(y_seq) * y_hat_seq)
-# cost = T.sum((y_seq - y_hat_seq) ** 2)
+# cost = T.sum(-T.log(y_seq) * y_hat_seq)
+cost = T.sum((y_seq - y_hat_seq) ** 2)
 
 # gradient function
 gradients = T.grad(cost, parameters)
@@ -172,6 +176,7 @@ def trim(s):
   return ret
 
 def gen_test(idx):
+  print "generating result..."
   f = open("../result/result_" + str(idx) + ".csv", "w+")
   f.write("id,phone_sequence\n")
   for i in range(592):
@@ -192,9 +197,9 @@ def run():
   global x_seq, y_hat_seq
   movement = 0
   lamb = 0.5
-  mu = 0.001
+  mu = 0.01
   tStart = time.time()
-  
+ 
   init()
   
   # training information
@@ -204,14 +209,16 @@ def run():
   f.close()
   it = 1
   while True:
-    num_file = 100
+    # num_file = 57996
+    num_file = 1000
+    gap = 1000
     total_cost = 0
     total_acc  = 0
-    max_acc = 0.4
+    max_acc = 0.0
     for i in range(num_file):
       a_0.set_value(np.zeros(N_HIDDEN))
       y_0.set_value(np.zeros(N_OUTPUT))
-      x_seq, y_hat_seq, sentence_size = get_data(i*30+1)
+      x_seq, y_hat_seq, sentence_size = get_data(i)
       cost, y_seq = rnn_train(x_seq, y_hat_seq)
       cost = cost / float(sentence_size)
       acc = accuracy(y_seq, y_hat_seq)
@@ -227,6 +234,6 @@ def run():
     f.close()
     it += 1
     mu *= 0.9999
-    if it % 100 == 0 and total_acc > max_acc:
+    if it % gap == 0 and total_acc > max_acc:
       max_acc = total_acc
-      gen_test(it/100)
+      gen_test(it/gap)
