@@ -25,14 +25,21 @@ N_OUTPUT = 48
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
 Wh   = theano.shared(np.matrix([[1.0 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.1) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
 bo   = theano.shared(np.array ([ random.gauss(0.0, 0.0) for i in range(N_OUTPUT)]))
-bh   = theano.shared(np.array ([ random.gauss(0.0, 0.1) for i in range(N_HIDDEN)]))
+bh   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_HIDDEN)]))
+
+Wi_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wh_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+bo_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_OUTPUT)]))
+bh_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
 a_0 = theano.shared(np.zeros(N_HIDDEN))
 y_0 = theano.shared(np.zeros(N_OUTPUT))
 parameters = [Wi, bh, Wo, bo, Wh]
+sigma = [Wi_sigma, bh_sigma, Wo_sigma, bo_sigma, Wh_sigma]
 
 
 def init():
@@ -68,9 +75,10 @@ def get_data(idx):
 # update function
 def updateFunc(param, grad):
   global mu
-  parameters_updates = [(p, p - mu * g) for p,g in zip(parameters,gradients) ] 
+  parameters_updates = [(p, p - mu * T.clip(g, -0.01, 0.01)) for p,g in zip(parameters,gradients) ] 
   return parameters_updates
 
+"""
 lamb = 0.5
 def momentum (param, grad):
   global mu, lamb, momentum, movement
@@ -79,6 +87,18 @@ def momentum (param, grad):
     movement = theano.shared(0.)
     movement = (lamb * movement) - mu * T.clip(g, -10, 10)
     param_updates += [(p, p + movement)]
+  return param_updates
+"""
+
+def rmsprop (param, sigma, grad):
+  global mu
+  alpha = 0.6
+  param_updates = []
+  for p, s, g in zip(param, sigma, grad):
+    g = T.clip(g, -0.1, 0.1)
+    new_s = T.sqrt(alpha * T.sqr(s) + (1 - alpha) * T.sqr(g))
+    param_updates += [(p, p - mu * g / new_s)]
+    param_updates += [(s, new_s)]
   return param_updates
 
 def sigmoid(z):
@@ -100,8 +120,9 @@ a_seq, _ = theano.scan(
   outputs_info = a_0,
   truncate_gradient = -1
 )
-# y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
-y_seq = sigmoid(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+#y_seq = relu(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+#y_seq = sigmoid(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
 
 # cost function
 # cost = T.sum(-T.log(y_seq) * y_hat_seq)
@@ -115,7 +136,7 @@ rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
     outputs = [cost, y_seq],
     updates = updateFunc(parameters, gradients)
-    #updates = momentum(parameters, gradients)
+    #updates = rmsprop(parameters, sigma, gradients)
 )
 
 # testing function
@@ -193,11 +214,8 @@ def gen_test(idx):
 def run():
   global test_inst
   global mu
-  global lamb, movement
   global x_seq, y_hat_seq
-  movement = 0
-  lamb = 0.5
-  mu = 0.01
+  mu = 0.0001
   tStart = time.time()
  
   init()
@@ -224,7 +242,6 @@ def run():
       acc = accuracy(y_seq, y_hat_seq)
       total_cost += cost
       total_acc += acc
-      print i, "cost:", cost, "accuracy:", acc
     
     total_cost /= float(num_file)
     total_acc  /= float(num_file)
