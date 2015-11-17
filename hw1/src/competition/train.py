@@ -27,48 +27,30 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-<<<<<<< Updated upstream
-w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(150)]))
-w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(150)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(150)] for i in range(48) ]))
-b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
-b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(150)]))
-b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
+N_HIDDEN = 512
+w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(69) ] for i in range(N_HIDDEN)]))
+w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(48) ]))
+b1    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+b2    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(48) ]))
+w1_mom    = theano.shared(numpy.matrix([[0.0 for j in range(69) ] for i in range(N_HIDDEN)]))
+w2_mom    = theano.shared(numpy.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w3_mom    = theano.shared(numpy.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(48) ]))
+b1_mom    = theano.shared(numpy.array([0.0 for i in range(N_HIDDEN)]))
+b2_mom    = theano.shared(numpy.array([0.0 for i in range(N_HIDDEN)]))
+b3_mom    = theano.shared(numpy.array([0.0 for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
+momentum_params = [w1_mom, w2_mom, w3_mom, b1_mom, b2_mom, b3_mom]
 
 z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
 a1 = 1 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = 1 / (1 + T.exp(-z3))
-=======
-w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(69) ] for i in range(256)]))
-w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
-w4    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(256)]))
-w5    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.1) for j in range(256)] for i in range(48) ]))
-b1    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
-b2    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
-b3    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
-b4    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(256)]))
-b5    = theano.shared(numpy.array([random.gauss(0.0, 0.1) for i in range(48) ]))
-parameters = [w1, w2, w3, w4, w5, b1, b2, b3, b4, b5]
-
-z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
-a1 = 1 / (1 + T.exp(-z1))
-#a1 = T.clip(z1, 0, 30)
-z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
-#a2 = T.clip(z2, 0, 30)
-a2 = 1 / (1 + T.exp(-z2))
-z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-a3 = 1 / (1 + T.exp(-z3))
-z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
-a4 = 1 / (1 + T.exp(-z4))
-z5 = T.dot(w5, a4) + b5.dimshuffle(0, 'x')
-mean = T.sum(T.exp(z5), axis=0)
-y  = T.exp(z5) / mean.dimshuffle('x', 0)
->>>>>>> Stashed changes
+mean = T.sum(T.exp(z3), axis=0)
+y  = T.exp(z3) / mean.dimshuffle('x', 0)
+post = T.log(y)
 
 def init():
   print "initializing..."
@@ -119,6 +101,15 @@ def updateFunc(param, grad):
   param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
   return param_updates
 
+def momentum(param, momentum_params, grad):
+  global mu
+  param_updates = []
+  lamb = 0.5
+  for p, m, g in zip(param, momentum_params, grad):
+    new_m = lamb * m - mu * g
+    param_updates += [(m, new_m)]
+    param_updates += [(p, p + new_m)]
+  return param_updates
 # cost function
 cost = T.sum((y - y_hat) ** 2) / batch_size
 
@@ -128,7 +119,8 @@ gradients = T.grad(cost, parameters)
 # training function
 train = theano.function(
     inputs = [x, y_hat],
-    updates = updateFunc(parameters, gradients),
+    #updates = updateFunc(parameters, gradients),
+    updates = momentum(parameters, momentum_params, gradients),
     outputs = cost
 )
 
@@ -138,6 +130,10 @@ test = theano.function(
     outputs = y
 )
 
+get_post = theano.function(
+    inputs = [x],
+    outputs = post
+)
 def match(arr):
   global map_idx_48, map_48_39
   idx = 0
@@ -159,70 +155,56 @@ def validate():
       correct += 1
   percentage = float(correct) / data_size
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
-  return percentage > 0.4
 
 def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.0001
+  mu = 0.001
   tStart = time.time()
   
   init()
   
   # training information
-<<<<<<< Updated upstream
-  f = open("cost.txt", "w+")
-  f.write("train data: small + change data\n")
-  f.write("mu = %d\n" % mu)
-  f.write("batch_size = %d\n" % batch_size)
-  f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-150-150-48")
-=======
-  f = open("cost/greenli/cost_momentum_6.txt", "w+")
-  f.write("train data: small + change data\n")
-  f.write("momentum\n")
-  f.write("lambda = %f\n" % lamb)
-  f.write("mu = %f\n" % mu)
-  f.write("mu *= 0.9999")
-  f.write("batch_size = %d\n" % batch_size)
-  f.write("batch_num = %d\n" % batch_num)
-  f.write("3 layers: 69-256-256-256-256-48\n")
->>>>>>> Stashed changes
-  
   print "start training"
   
   it = 1
-<<<<<<< Updated upstream
-  while it <= 1000:
-=======
-  while it <= 600:
->>>>>>> Stashed changes
+  while it <= 800:
     cost = 0
     X_batch, Y_hat_batch = make_batch(batch_size, batch_num)
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
     print it, " cost: ", cost
-    f.write("%d, cost: %f\n" % (it, cost))
     if (it % 10 == 0):
-       if validate():
-         break
-       change_train_data()
+      validate()
+      change_train_data()
     it += 1
-    mu *= 0.9999
+    mu *= 0.999
 
   tEnd = time.time()
-  f.write("It cost %f mins" % ((tEnd - tStart) / 60))
-  f.close()
   
   result = test(test_fbank)
   
-<<<<<<< Updated upstream
-  f = open("result/result_music960633_3.csv", "w+")
-=======
-  f = open("result/greenli/momentum_6.csv", "w+")
->>>>>>> Stashed changes
+  f = open("result/greenli/new_1.csv", "w+")
   f.write("Id,Prediction\n")
   for i in range(len(test_inst)):
     f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
+  f.close()
+  global train_inst, train_fbank
+  train_inst, train_fbank = readdata.get_train_fbank()
+  f = open("./my_train.post", "w+")
+  post_result = get_post(train_fbank)
+  for i in range(len(train_inst)):
+    f.write("\n%s " % train_inst[i])
+    for j in range(48):
+      f.write("%s " % post_result[j][i])
+  f.close()
+
+  f = open("./my_test.post", "w+")
+  post_result = get_post(test_fbank)
+  for i in range(len(test_inst)):
+    f.write("\n%s " % test_inst[i])
+    for j in range(48):
+      f.write("%s " % post_result[j][i])
+  f.close()
