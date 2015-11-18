@@ -3,7 +3,7 @@
 import random
 
 def gen_train_fbank():
-  f = open("train.post", "r")
+  f = open("my_train.post", "r")
   data = []
   i = 0
   filename = "small_data/train_" + str(i) + ".post"
@@ -13,7 +13,7 @@ def gen_train_fbank():
     if s == "": break
     temp = s.strip().split(' ')
     temp = temp[0].strip().split('_')
-    if int(temp[-1]) % 50 == 1:
+    if int(temp[-1]) % 100 == 1:
       print "generating train_" + str(i) + ".post"
       if i != 0:
         small_file.close()
@@ -24,7 +24,7 @@ def gen_train_fbank():
   f.close()
 
 def gen_test_fbank():
-  f = open("test.post", "r")
+  f = open("my_test.post", "r")
   data = []
   i = 0
   filename = "small_test/test_" + str(i) + ".post"
@@ -46,3 +46,4 @@ def gen_test_fbank():
 
 if __name__ == "__main__":
   gen_train_fbank()
+  gen_test_fbank()
