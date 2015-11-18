@@ -26,21 +26,25 @@ N_OUTPUT = 48
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh   = theano.shared(np.matrix([[1.0 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
-bo   = theano.shared(np.array ([ random.gauss(0.0, 0.0) for i in range(N_OUTPUT)]))
-bh   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_HIDDEN)]))
+W1   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+W2   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wm   = theano.shared(np.matrix([[1.0 if i==j else 0.0    for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+b1   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+b2   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+bo   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
 
-Wi_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+W1_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+W2_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wm_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
 Wo_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+b1_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
+b2_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
 bo_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_OUTPUT)]))
-bh_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
 a_0 = theano.shared(np.zeros(N_HIDDEN))
 y_0 = theano.shared(np.zeros(N_OUTPUT))
-parameters = [Wi, bh, Wo, bo, Wh]
-sigma = [Wi_sigma, bh_sigma, Wo_sigma, bo_sigma, Wh_sigma]
+parameters = [W1, b1, W2, Wm, b2, Wo, bo]
+sigma = [W1_sigma, b1_sigma, W2_sigma, Wm_sigma, b2_sigma, Wo_sigma, bo_sigma]
 
 
 def init():
@@ -66,10 +70,8 @@ def get_data(idx):
   X_seq = train_post
   Y_hat_seq = []
   size = len(train_post)
-  i = 0
-  while i < size:
+  for i in range(size):
     Y_hat_seq += [[(1.0 if map_inst_48[train_inst[i]] == map_idx_48[row] else 0.0) for row in range(N_OUTPUT)]]
-    i = i + 1
   return X_seq, Y_hat_seq, size
 
 
@@ -79,24 +81,12 @@ def updateFunc(param, grad):
   parameters_updates = [(p, p - mu * T.clip(g, -0.01, 0.01)) for p,g in zip(parameters,gradients) ] 
   return parameters_updates
 
-"""
-lamb = 0.5
-def momentum (param, grad):
-  global mu, lamb, momentum, movement
-  param_updates = []
-  for p, g in zip(param, grad):
-    movement = theano.shared(0.)
-    movement = (lamb * movement) - mu * T.clip(g, -1, 1)
-    param_updates += [(p, p + movement)]
-  return param_updates
-"""
-
 def rmsprop (param, sigma, grad):
   global mu
   alpha = 0.6
   param_updates = []
   for p, s, g in zip(param, sigma, grad):
-    g = T.clip(g, -0.1, 0.1)
+    g = T.clip(g, -1.0, 1.0)
     new_s = T.sqrt(alpha * T.sqr(s) + (1 - alpha) * T.sqr(g))
     param_updates += [(p, p - mu * g / new_s)]
     param_updates += [(s, new_s)]
@@ -111,23 +101,20 @@ def relu(z):
 def softmax(zs):
   return T.exp(zs) / T.sum(T.exp(zs), axis=1).dimshuffle(0, 'x')
 
-def step (z_t, a_tm1):
-  return sigmoid(z_t + T.dot(a_tm1, Wh) + bh)
+def step (a1_t, a_tm1):
+  return sigmoid(T.dot(a1_t, W2) + T.dot(a_tm1, Wm) + b2)
 
-z_seq = T.dot(x_seq, Wi)
-a_seq, _ = theano.scan(
+a1_seq = sigmoid(T.dot(x_seq, W1) + b1.dimshuffle('x', 0))
+a2_seq, _ = theano.scan(
   step,
-  sequences = z_seq,
+  sequences = a1_seq,
   outputs_info = a_0,
   truncate_gradient = -1
 )
-y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
-#y_seq = relu(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
-#y_seq = sigmoid(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
+y_seq = softmax(T.dot(a2_seq, Wo) + bo.dimshuffle('x', 0))
 
 # cost function
 cost = T.sum(-T.log(y_seq) * y_hat_seq)
-# cost = T.sum((y_seq - y_hat_seq) ** 2)
 
 # gradient function
 gradients = T.grad(cost, parameters)
@@ -195,10 +182,6 @@ def trim(s):
   for i in range(len(tmp)):
     if i == 0 or tmp[i] != tmp[i-1]:
       ret += tmp[i]
-  if len(ret) > 1 and ret[0] == 'L':
-    ret = ret[1:]
-  if len(ret) > 1 and ret[-1] == 'L':
-    ret = ret[:-1]
   return ret
 
 def gen_test(idx):
@@ -216,8 +199,10 @@ def gen_test(idx):
     seq = ""
     f2.write("%s" % test_inst)
     for j in range(len(result)):
-        seq += map_48_char[match(result[j])]
-        f2.write(",%s" % match(result[j]))
+      ch = map_48_char[match(result[j])]
+      if ch != 'L':
+        seq += ch
+      f2.write(",%s" % match(result[j]))
     f1.write("%s,%s\n" % (test_inst, trim(seq)))
     f2.write("\n")
   f1.close()
@@ -227,7 +212,6 @@ def run():
   global test_inst
   global mu
   global x_seq, y_hat_seq
-  mu = 0.0001
   tStart = time.time()
  
   init()
@@ -238,10 +222,12 @@ def run():
   f.write("iteration,cost,accuracy\n")
   f.close()
   it = 1
-  num_file = 10
+  num_file = 13000
   gap = 1000
   max_acc = 0.0
   watermark = 1
+  threshold = 0.6
+  mu = 0.0001
   while True:
     total_cost = 0
     total_acc  = 0
@@ -263,10 +249,7 @@ def run():
     f.close()
     it += 1
     mu *= 0.999
-    if total_acc > 0.9:
+    if total_acc > threshold:
       gen_test(watermark)
-      if num_file < 10000:
-        watermark += 1
-        mu = 0.0001
-        num_file *= 2
-        print "increase num_file to", num_file
+      watermark += 1
+      threshold *= 1.05
