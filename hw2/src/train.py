@@ -26,22 +26,24 @@ N_OUTPUT = 48
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh   = theano.shared(np.matrix([[0.01 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
-bo   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_OUTPUT)]))
-bh   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_HIDDEN)]))
 
-Wi_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-Wh_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+W1   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wm   = theano.shared(np.matrix([[0.1 if i==j else 0.00   for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.01) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+b1   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+bo   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
+
+W1_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wm_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
 Wo_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
 b1_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
-b2_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
 bo_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_OUTPUT)]))
+
 a_0 = theano.shared(np.zeros(N_HIDDEN))
 y_0 = theano.shared(np.zeros(N_OUTPUT))
-parameters = [W1, b1, W2, Wm, b2, Wo, bo]
-sigma = [W1_sigma, b1_sigma, W2_sigma, Wm_sigma, b2_sigma, Wo_sigma, bo_sigma]
+
+parameters = [W1, Wm, b1, Wo, bo]
+sigma = [W1_sigma, Wm_sigma, b1_sigma, Wo_sigma, bo_sigma]
 
 
 def init():
@@ -99,16 +101,15 @@ def softmax(zs):
   return T.exp(zs) / T.sum(T.exp(zs), axis=1).dimshuffle(0, 'x')
 
 def step (a1_t, a_tm1):
-  return sigmoid(T.dot(a1_t, W2) + T.dot(a_tm1, Wm) + b2)
+  return sigmoid(T.dot(a1_t, W1) + T.dot(a_tm1, Wm) + b1)
 
-a1_seq = sigmoid(T.dot(x_seq, W1) + b1.dimshuffle('x', 0))
-a2_seq, _ = theano.scan(
+a_seq, _ = theano.scan(
   step,
-  sequences = a1_seq,
+  sequences = x_seq,
   outputs_info = a_0,
   truncate_gradient = -1
 )
-y_seq = softmax(T.dot(a2_seq, Wo) + bo.dimshuffle('x', 0))
+y_seq = softmax(T.dot(a_seq, Wo) + bo.dimshuffle('x', 0))
 
 # cost function
 cost = T.sum(-T.log(y_seq) * y_hat_seq)
@@ -120,7 +121,6 @@ gradients = T.grad(cost, parameters)
 rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
     outputs = [cost, y_seq],
-    #updates = updateFunc(parameters, gradients)
     updates = rmsprop(parameters, sigma, gradients)
 )
 
@@ -129,28 +129,6 @@ test = theano.function(
     inputs = [x_seq],
     outputs = y_seq
 )
-
-def match(arr):
-  global map_idx_48, map_48_39
-  idx = 0
-  mx = arr[0]
-  for i in range(len(arr)):
-    if arr[i] > mx:
-      idx = i
-      mx = arr[i]
-  return map_48_39[map_idx_48[idx]]
-
-def validate():
-  global map_inst_48, map_inst_48_39
-  valid_inst, valid_fbank = readdata.get_small_train_data()
-  valid_result = test(valid_fbank)
-  data_size = len(valid_inst)
-  correct = 0
-  for i in range(data_size):
-    if map_48_39[map_inst_48[valid_inst[i]]] == match([valid_result[j][i] for j in range(N_INPUT)]):
-      correct += 1
-  percentage = float(correct) / data_size
-  print "validate:", correct, "/", data_size, "(", percentage, ")" 
 
 def argmax(arr):
   mx = arr[0]
@@ -161,12 +139,16 @@ def argmax(arr):
       mx = x
       idx = i
     i = i + 1
-  return idx, mx
+  return idx
+
+def match(arr):
+  global map_idx_48, map_48_39
+  return map_48_39[map_idx_48[argmax(arr)]]
 
 def accuracy(y_seq, y_hat_seq):
   cnt = 0
   for i in range(len(y_seq)):
-    if y_hat_seq[i][argmax(y_seq[i])[0]] == 1:
+    if y_hat_seq[i][argmax(y_seq[i])] == 1:
       cnt = cnt + 1
   return float(cnt) / len(y_seq)
 
@@ -189,6 +171,10 @@ def trim(s):
   for i in range(len(tmp)):
     if i == 0 or tmp[i] != tmp[i-1]:
       ret += tmp[i]
+  if ret[0] == 'L':
+    ret = ret[1:]
+  if ret[-1] == 'L':
+    ret = ret[:-1]
   return ret
 
 def gen_test(idx):
@@ -207,8 +193,7 @@ def gen_test(idx):
     f2.write("%s" % test_inst)
     for j in range(len(result)):
       ch = map_48_char[match(result[j])]
-      if ch != 'L':
-        seq += ch
+      seq += ch
       f2.write(",%s" % match(result[j]))
     f1.write("%s,%s\n" % (test_inst, trim(seq)))
     f2.write("\n")
@@ -219,7 +204,6 @@ def run():
   global test_inst
   global mu
   global x_seq, y_hat_seq
-  tStart = time.time()
  
   init()
 
@@ -229,16 +213,10 @@ def run():
   f.write("iteration,cost,accuracy\n")
   f.close()
   it = 1
-  num_file = 13000
-  gap = 1000
+  num_file = 10
   max_acc = 0.0
   watermark = 1
-<<<<<<< HEAD
-  threshold = 0.6
-  mu = 0.0001
-=======
-  # num_file = 13064
->>>>>>> 5df003fc6df85f4e0ee0f840faa8541a8f8b13b6
+  mu = 0.001
   while True:
     total_cost = 0
     total_acc  = 0
@@ -259,13 +237,8 @@ def run():
     f.write("%d,%f,%f\n" % (it, total_cost, total_acc))
     f.close()
     it += 1
-<<<<<<< HEAD
     mu *= 0.999
-    if total_acc > threshold:
-=======
-    mu *= 0.9999
-    if total_acc > 0.9:
->>>>>>> 5df003fc6df85f4e0ee0f840faa8541a8f8b13b6
+    if total_acc > 0.8:
       gen_test(watermark)
       watermark += 1
-      threshold *= 1.05
+      num_file += 10
