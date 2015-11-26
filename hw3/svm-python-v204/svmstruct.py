@@ -40,8 +40,39 @@ def read_examples(filename, sparm):
     # problem for learning.  The correct hypothesis would obviously
     # tend to have a positive weight for the first feature, and a
     # negative weight for the 4th feature.
-    return [([1,1,0,0], 1), ([1,0,1,0], 1), ([0,1,0,1],-1),
-            ([0,0,1,1],-1), ([1,0,0,0], 1), ([0,0,0,1],-1)]
+
+    print "reading train.lab"
+    map_inst_to_phone = {}
+    f_label = open("../../data/MLDS_HW1_RELEASE_v1/label/train.lab", "r")
+    for line in f_label:
+      tokens = line.strip().split(',')
+      assert len(tokens) == 2, "parse label error"
+      assert tokens[0] not in map_inst_to_phone, "inst already exists"
+      map_inst_to_phone[tokens[0]] = tokens[1]
+
+    print "reading 48_39.map"
+    map_phone_to_idx = {}
+    f_phone = open("../../data/MLDS_HW1_RELEASE_v1/phones/48_39.map", "r")
+    idx = 0
+    for line in f_phone:
+      tokens = line.strip().split('\t')
+      assert len(tokens) == 2, "parse phone error"
+      assert tokens[0] not in map_phone_to_idx, "phone already exists"
+      map_phone_to_idx[tokens[0]] = idx
+      idx += 1
+
+    print "reading train_0.ark"
+    data = []
+    f_data = open("../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_0.ark", "r")
+    for line in f_data:
+      tokens = line.strip().split(' ')
+      assert len(tokens) == 70, "parse fbank error"
+      inst = tokens[0]
+      x = zip(range(69), tokens[1:])
+      y = map_phone_to_idx[map_inst_to_phone[inst]]
+      data.append((x, y))
+  
+    return data
 
 def init_model(sample, sm, sparm):
     """Initializes the learning model.
@@ -50,11 +81,10 @@ def init_model(sample, sm, sparm):
     the number of features.  The ancillary purpose is to add any
     information to sm that is necessary from the user code
     perspective.  This function returns nothing."""
-    # In our binary classification task, we've encoded a pattern as a
-    # list of four features.  We just want a linear rule, so we have a
-    # weight corresponding to each feature.  We also add one to allow
-    # for a last "bias" feature.
-    sm.size_psi = len(sample[0][0])+1
+    
+    sm.num_features = 69
+    sm.num_classes = 48
+    sm.size_psi = sm.num_features * sm.num_classes
 
 def init_constraints(sample, sm, sparm):
     """Initializes special constraints.
@@ -108,10 +138,9 @@ def init_constraints(sample, sm, sparm):
 
 def classify_example(x, sm, sparm):
     """Given a pattern x, return the predicted label."""
-    # Believe it or not, this is a dot product.  The last element of
-    # sm.w is assumed to be the weight associated with the bias
-    # feature as explained earlier.
-    return sum([i*j for i,j in zip(x,sm.w[:-1])]) + sm.w[-1]
+    scores = [(classification_score(x, c, sm, sparm) + loss(y, c, sparm), c) \
+        for c in range(sm.num_classes)]
+    return max(scores)[1]
 
 def find_most_violated_constraint(x, y, sm, sparm):
     """Return ybar associated with x's most violated constraint.
@@ -129,10 +158,10 @@ def find_most_violated_constraint(x, y, sm, sparm):
     loss into account at all, but it isn't always a terrible
     approximation.  One still technically maintains the empirical
     risk bound condition, but without any regularization."""
-    score = classify_example(x,sm,sparm)
-    discy, discny = y*score, -y*score + 1
-    if discy > discny: return y
-    return -y
+
+    scores = [(classification_score(x, c, sm, sparm) + loss(y, c, sparm), c) \
+        for c in range(sm.num_classes)]
+    return max(scores)[1]
 
 def find_most_violated_constraint_slack(x, y, sm, sparm):
     """Return ybar associated with x's most violated constraint.
@@ -157,13 +186,11 @@ def psi(x, y, sm, sparm):
     svmapi.Sparse object, or sequence of svmapi.Sparse objects (useful
     during kernel evaluations, as all components undergo kernel
     evaluation separately).  There is no default behavior."""
-    # In the case of binary classification, psi is just the class (+1
-    # or -1) times the feature vector for x, including that special
-    # constant bias feature we pretend that we have.
+
     import svmapi
-    thePsi = [0.5*y*i for i in x]
-    thePsi.append(0.5*y) # Pretend as though x had an 1 at the end.
-    return svmapi.Sparse(thePsi)
+    offset = sm.num_features * y
+    pvec = svmapi.Sparse([k + offset, v] for k, v in x)
+    return pvec
 
 def loss(y, ybar, sparm):
     """Return the loss of ybar relative to the true labeling y.
@@ -177,9 +204,11 @@ def loss(y, ybar, sparm):
 
     The default behavior is to perform 0/1 loss based on the truth of
     y==ybar."""
-    # If they're the same sign, then the loss should be 0.
-    if y*ybar > 0: return 0
-    return 1
+    
+    if y != ybar:
+      return 1.0
+    else:
+      return 0.0
 
 def print_iteration_stats(ceps, cached_constraint, sample, sm,
                           cset, alpha, sparm):
