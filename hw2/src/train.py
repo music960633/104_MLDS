@@ -19,24 +19,21 @@ map_48_char = {}
 mu = 0.0005
 
 # parameter
-N_HIDDEN = 128
+N_HIDDEN = 64
 N_INPUT = 48
 N_OUTPUT = 48
 
 # neuron variable declaration
 x_seq     = T.matrix("input")
 y_hat_seq = T.matrix("reference")
-W1   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-W2   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wm   = theano.shared(np.matrix([[1.0 if i==j else 0.0    for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.1)  for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
-b1   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
-b2   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
-bo   = theano.shared(np.array ([ random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
+Wi   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wh   = theano.shared(np.matrix([[0.01 if i==j else 0.00  for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wo   = theano.shared(np.matrix([[random.gauss(0.0, 0.001) for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
+bo   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_OUTPUT)]))
+bh   = theano.shared(np.array ([ random.gauss(0.0, 0.001) for i in range(N_HIDDEN)]))
 
-W1_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
-W2_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-Wm_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+Wi_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_INPUT )]))
+Wh_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
 Wo_sigma   = theano.shared(np.matrix([[0.0 for j in range(N_OUTPUT)] for i in range(N_HIDDEN)]))
 b1_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
 b2_sigma   = theano.shared(np.array ([ 0.0 for i in range(N_HIDDEN)]))
@@ -83,7 +80,7 @@ def updateFunc(param, grad):
 
 def rmsprop (param, sigma, grad):
   global mu
-  alpha = 0.6
+  alpha = 0.7
   param_updates = []
   for p, s, g in zip(param, sigma, grad):
     g = T.clip(g, -1.0, 1.0)
@@ -123,7 +120,7 @@ gradients = T.grad(cost, parameters)
 rnn_train = theano.function(
     inputs = [x_seq, y_hat_seq],
     outputs = [cost, y_seq],
-    # updates = updateFunc(parameters, gradients)
+    #updates = updateFunc(parameters, gradients)
     updates = rmsprop(parameters, sigma, gradients)
 )
 
@@ -176,9 +173,19 @@ def accuracy(y_seq, y_hat_seq):
 def trim(s):
   tmp = ""
   ret = ""
-  for i in range(2, len(s)):
-    if s[i] == s[i-1] and s[i] != s[i-2]:
-      tmp += s[i]
+  window_size = 5
+  for i in range(len(s) - window_size):
+    count = {}
+    for j in range(window_size):
+      if s[i+j] not in count.keys():
+        count[s[i+j]] = 1
+      else:
+        count[s[i+j]] += 1
+    for phen, num in count.items():
+      if num > 2:
+        tmp += phen
+        break
+
   for i in range(len(tmp)):
     if i == 0 or tmp[i] != tmp[i-1]:
       ret += tmp[i]
@@ -226,8 +233,12 @@ def run():
   gap = 1000
   max_acc = 0.0
   watermark = 1
+<<<<<<< HEAD
   threshold = 0.6
   mu = 0.0001
+=======
+  # num_file = 13064
+>>>>>>> 5df003fc6df85f4e0ee0f840faa8541a8f8b13b6
   while True:
     total_cost = 0
     total_acc  = 0
@@ -248,8 +259,13 @@ def run():
     f.write("%d,%f,%f\n" % (it, total_cost, total_acc))
     f.close()
     it += 1
+<<<<<<< HEAD
     mu *= 0.999
     if total_acc > threshold:
+=======
+    mu *= 0.9999
+    if total_acc > 0.9:
+>>>>>>> 5df003fc6df85f4e0ee0f840faa8541a8f8b13b6
       gen_test(watermark)
       watermark += 1
       threshold *= 1.05
