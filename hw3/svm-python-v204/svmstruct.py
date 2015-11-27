@@ -63,6 +63,7 @@ def read_examples(filename, sparm):
 
     print "reading train_0.ark"
     data = []
+    s = set()
     f_data = open("../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_0.ark", "r")
     for line in f_data:
       tokens = line.strip().split(' ')
@@ -70,7 +71,11 @@ def read_examples(filename, sparm):
       inst = tokens[0]
       x = zip(range(69), tokens[1:])
       y = map_phone_to_idx[map_inst_to_phone[inst]]
+      z = map(lambda x: int(float(x)), tokens[1:])
+      s.add(tuple(z))
       data.append((x, y))
+
+    print len(s)
   
     return data
 
