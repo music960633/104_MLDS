@@ -75,3 +75,16 @@ def get_map_inst_48():
   f.close()
   return map_inst_48
 
+def get_48_idx():
+  filename = "../../../data/MLDS_HW1_RELEASE_v1/phones/48_39.map"
+  f = open(filename)
+  map_48_idx = {}
+  idx = 0
+  while True:
+    s = f.readline()
+    if s == "": break
+    s = s.strip().split('\t')
+    map_48_39[s[0]] = idx
+    idx += 1
+  f.close()
+  return map_48_idx

@@ -70,8 +70,8 @@ def init():
   map_48_39   = readdata.get_map_48_39()
   # phone and index mapping
   print "generating phone - index mapping"
-  map_idx_48  = dict(enumerate(map_48_39.keys(), 0))
-  map_48_idx  = dict(zip(map_idx_48.values(), map_idx_48.keys()))
+  map_48_idx = readdata.get_map_48_idx()
+  map_idx_48 = dict(zip(map_48_idx.values(), map_48_idx.keys()))
 
 def change_train_data():
   global train_inst, train_fbank
