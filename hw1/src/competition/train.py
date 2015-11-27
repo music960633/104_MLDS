@@ -43,13 +43,15 @@ b3_mom    = theano.shared(numpy.array([0.0 for i in range(48) ]))
 parameters = [w1, w2, w3, b1, b2, b3]
 momentum_params = [w1_mom, w2_mom, w3_mom, b1_mom, b2_mom, b3_mom]
 
-z1 = T.dot(w1,  x) + b1.dimshuffle(0, 'x')
+z1 = T.dot(w1, x) + b1.dimshuffle(0, 'x')
 a1 = 1 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-mean = T.sum(T.exp(z3), axis=0)
-y  = T.exp(z3) / mean.dimshuffle('x', 0)
+y  = T.exp(z3) / T.sum(T.exp(z3), axis=0).dimshuffle('x', 0)
+
+cost = T.sum(-T.log(y) * y_hat) / batch_size
+gradients = T.grad(cost, parameters)
 post = T.log(y)
 
 def init():
@@ -110,17 +112,12 @@ def momentum(param, momentum_params, grad):
     param_updates += [(m, new_m)]
     param_updates += [(p, p + new_m)]
   return param_updates
-# cost function
-cost = T.sum((y - y_hat) ** 2) / batch_size
-
-# gradient function
-gradients = T.grad(cost, parameters)
 
 # training function
 train = theano.function(
     inputs = [x, y_hat],
-    #updates = updateFunc(parameters, gradients),
-    updates = momentum(parameters, momentum_params, gradients),
+    updates = updateFunc(parameters, gradients),
+    # updates = momentum(parameters, momentum_params, gradients),
     outputs = cost
 )
 
@@ -196,15 +193,17 @@ def run():
   f = open("./my_train.post", "w+")
   post_result = get_post(train_fbank)
   for i in range(len(train_inst)):
-    f.write("\n%s " % train_inst[i])
+    f.write("%s" % train_inst[i])
     for j in range(48):
-      f.write("%s " % post_result[j][i])
+      f.write(" %s" % post_result[j][i])
+    f.write('\n')
   f.close()
 
   f = open("./my_test.post", "w+")
   post_result = get_post(test_fbank)
   for i in range(len(test_inst)):
-    f.write("\n%s " % test_inst[i])
+    f.write("%s" % test_inst[i])
     for j in range(48):
-      f.write("%s " % post_result[j][i])
+      f.write(" %s" % post_result[j][i])
+    f.write('\n')
   f.close()
