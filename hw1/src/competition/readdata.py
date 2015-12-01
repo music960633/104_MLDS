@@ -2,51 +2,53 @@ import re
 import numpy
 import random
 
-def get_train_fbank():
-  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/train.ark"
+N_INPUT = 69*3
+
+def get_train_fbank(idx):
+  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/train2_" \
+             + str(idx) + ".ark"
   # filename = "train.ark"
   f = open(filename)
   train_inst = []
-  train_fbank = [[] for i in range(69)]
+  train_fbank = [[] for i in range(N_INPUT)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
-    for i in range(69):
+    for i in range(N_INPUT):
       train_fbank[i] += [float(s[i+1])]
   f.close()
   return train_inst, train_fbank
 
-def get_small_train_fbank():
+def get_small_train_fbank(idx):
   filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_" \
-             + str(int(random.random() * 100)) \
-             + ".ark"
+             + str(idx) + ".ark"
   f = open(filename)
   train_inst = []
-  train_fbank = [[] for i in range(69)]
+  train_fbank = [[] for i in range(N_INPUT)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     train_inst += [s[0]]
-    for i in range(69):
+    for i in range(N_INPUT):
       train_fbank[i] += [float(s[i+1])]
   f.close()
   return train_inst, train_fbank
 
 def get_test_fbank():
-  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/test.ark"
+  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/test2.ark"
   # filename = "test.ark"
   f = open(filename)
   test_inst = []
-  test_fbank = [[] for i in range(69)]
+  test_fbank = [[] for i in range(N_INPUT)]
   while True:
     s = f.readline()
     if s == "": break
     s = s.strip().split(' ')
     test_inst += [s[0]]
-    for i in range(69):
+    for i in range(N_INPUT):
       test_fbank[i] += [float(s[i+1])]
   f.close()
   return test_inst, test_fbank
