@@ -28,7 +28,7 @@ mu = 1.0
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
 N_INPUT = 69*3
-N_HIDDEN = 256
+N_HIDDEN = 500
 N_OUTPUT = 48
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
 w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
@@ -194,7 +194,7 @@ def run():
           for i in range(len(train_inst_all)):
             f.write("%s" % train_inst_all[i])
             for j in range(48):
-              f.write(" %f" % post_result_all[j][i])
+              f.write(" %f" % post_result[j][i])
             f.write('\n')
         f.close()
 
