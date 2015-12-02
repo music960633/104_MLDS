@@ -32,26 +32,31 @@ N_HIDDEN = 256
 N_OUTPUT = 48
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
 w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w4    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
 b1    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
 b2    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
-b3    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+b4    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
 w1_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
 w2_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-w3_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
+w3_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w4_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
 b1_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
 b2_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
-b3_ada    = theano.shared(numpy.array([1.0 for i in range(N_OUTPUT)]))
-parameters = [w1, w2, w3, b1, b2, b3]
-reg = T.sum(w1*w1) + T.sum(w2*w2) + T.sum(w3*w3)
-adagrad_params = [w1_ada, w2_ada, w3_ada, b1_ada, b2_ada, b3_ada]
+b3_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
+b4_ada    = theano.shared(numpy.array([1.0 for i in range(N_OUTPUT)]))
+parameters = [w1, w2, w3, w4, b1, b2, b3, b4]
+adagrad_params = [w1_ada, w2_ada, w3_ada, w4_ada, b1_ada, b2_ada, b3_ada, b4_ada]
 
-z1 = T.dot(w1, x) + b1.dimshuffle(0, 'x')
+z1 = T.dot(w1, x ) + b1.dimshuffle(0, 'x')
 a1 = 1.0 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
 a2 = 1.0 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = T.exp(z3) / T.sum(T.exp(z3), axis=0).dimshuffle('x', 0)
+a3 = 1.0 / (1 + T.exp(-z3))
+z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
+y  = T.exp(z4) / T.sum(T.exp(z4), axis=0).dimshuffle('x', 0)
 
 cost = T.sum(-T.log(y) * y_hat) / batch_size
 gradients = T.grad(cost, parameters)
@@ -96,11 +101,6 @@ def make_batch(size, num):
   return X_ret, Y_ret
 
 # update function
-def updateFunc(param, grad):
-  global mu
-  param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
-  return param_updates
-
 def adagrad(param, adagrad_params, grad):
   global mu
   param_updates = []
@@ -112,8 +112,6 @@ def adagrad(param, adagrad_params, grad):
 # training function
 train = theano.function(
     inputs = [x, y_hat],
-    # updates = updateFunc(parameters, gradients),
-    # updates = momentum(parameters, momentum_params, gradients),
     updates = adagrad(parameters, adagrad_params, gradients),
     outputs = cost
 )
@@ -210,6 +208,5 @@ def run():
           f.write('\n')
         f.close()
   
-      # change_train_data()
     it += 1
     mu *= 0.999
