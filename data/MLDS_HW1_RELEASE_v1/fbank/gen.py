@@ -14,11 +14,12 @@ def gen_small_train_fbank():
   f.close()
   data_size = len(data)
 
-  for i in range(10):
+  for i in range(6):
     filename = "small_data/train_" + str(i) + ".ark"
     print "generating", filename, "..."
     f = open(filename, "w+")
-    for j in range(30000):
+    size = 500000 if i==0 else 100000
+    for j in range(size):
       idx = int(random.random() * data_size)
       f.write(data[idx][0])
       for j in range(idx-1, idx+1+1):
