@@ -2,56 +2,39 @@ import re
 import numpy
 import random
 
-N_INPUT = 69*3
+N_INPUT = 69
 
-def get_train_fbank(idx):
+def get_fbank(filename):
+  f = open(filename)
+  inst = []
+  fbank = [[] for i in range(N_INPUT)]
+  while True:
+    s = f.readline()
+    if s == "": break
+    s = s.strip().split(' ')
+    inst += [s[0]]
+    for i in range(N_INPUT):
+      fbank[i] += [float(s[i+1])]
+  f.close()
+  return inst, fbank
+
+def get_train_fbank():
+  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_all.ark"
+  return get_fbank(filename)
+
+def get_seg_train_fbank(idx):
   filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/train2_" \
              + str(idx) + ".ark"
-  # filename = "train.ark"
-  f = open(filename)
-  train_inst = []
-  train_fbank = [[] for i in range(N_INPUT)]
-  while True:
-    s = f.readline()
-    if s == "": break
-    s = s.strip().split(' ')
-    train_inst += [s[0]]
-    for i in range(N_INPUT):
-      train_fbank[i] += [float(s[i+1])]
-  f.close()
-  return train_inst, train_fbank
+  return get_fbank(filename)
 
-def get_small_train_fbank(idx):
-  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/train_" \
+def get_validate_fbank(idx):
+  filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/small_data/validate_" \
              + str(idx) + ".ark"
-  f = open(filename)
-  train_inst = []
-  train_fbank = [[] for i in range(N_INPUT)]
-  while True:
-    s = f.readline()
-    if s == "": break
-    s = s.strip().split(' ')
-    train_inst += [s[0]]
-    for i in range(N_INPUT):
-      train_fbank[i] += [float(s[i+1])]
-  f.close()
-  return train_inst, train_fbank
+  return get_fbank(filename)
 
 def get_test_fbank():
   filename = "../../../data/MLDS_HW1_RELEASE_v1/fbank/test2.ark"
-  # filename = "test.ark"
-  f = open(filename)
-  test_inst = []
-  test_fbank = [[] for i in range(N_INPUT)]
-  while True:
-    s = f.readline()
-    if s == "": break
-    s = s.strip().split(' ')
-    test_inst += [s[0]]
-    for i in range(N_INPUT):
-      test_fbank[i] += [float(s[i+1])]
-  f.close()
-  return test_inst, test_fbank
+  return get_fbank(filename)
 
 def get_map_48_39():
   filename = "../../../data/MLDS_HW1_RELEASE_v1/phones/48_39.map"

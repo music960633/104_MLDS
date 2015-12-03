@@ -13,8 +13,8 @@ map_idx_to_phone = {}
 map_48_to_39 = {}
 map_inst_to_phone = {}
 map_phone_to_char = {}
-p_emit = [[0.1 for j in range(N_PHONE)] for i in range(N_PHONE)]
-p_tran = [[0.1 for j in range(N_PHONE)] for i in range(N_PHONE)]
+p_emit = [[0.01 for j in range(N_PHONE)] for i in range(N_PHONE)]
+p_tran = [[0.01 for j in range(N_PHONE)] for i in range(N_PHONE)]
 
 def build():
   # build phone -> idx mapping

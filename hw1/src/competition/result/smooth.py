@@ -1,3 +1,5 @@
+import sys
+
 def smooth(infilename, outfilename):
   fin = open(infilename, "r")
   data = []
@@ -22,7 +24,15 @@ def smooth(infilename, outfilename):
       phone = data[i-1][1]
     else:
       phone = data[i+1][1]
+    data[i] = (data[i][0], phone)
     fout.write(phone + "\n")
   fout.close()
 
-smooth("result/new.csv", "result/smooth.csv")
+def main():
+  if len(sys.argv) != 3:
+    print "Usage:", sys.argv[0], "<infile> <outfile>"
+    return
+  smooth(sys.argv[1], sys.argv[2])
+
+if __name__ == "__main__":
+  main()

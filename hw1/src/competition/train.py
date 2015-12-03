@@ -27,7 +27,7 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-N_INPUT = 69*3
+N_INPUT = 69
 N_HIDDEN = 500
 N_OUTPUT = 48
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
@@ -48,6 +48,7 @@ b3_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
 b4_ada    = theano.shared(numpy.array([1.0 for i in range(N_OUTPUT)]))
 parameters = [w1, w2, w3, w4, b1, b2, b3, b4]
 adagrad_params = [w1_ada, w2_ada, w3_ada, w4_ada, b1_ada, b2_ada, b3_ada, b4_ada]
+reg_param = T.sum(w1*w1) + T.sum(w2*w2) + T.sum(w3*w3)
 
 z1 = T.dot(w1, x ) + b1.dimshuffle(0, 'x')
 a1 = 1.0 / (1 + T.exp(-z1))
@@ -58,7 +59,7 @@ a3 = 1.0 / (1 + T.exp(-z3))
 z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
 y  = T.exp(z4) / T.sum(T.exp(z4), axis=0).dimshuffle('x', 0)
 
-cost = T.sum(-T.log(y) * y_hat) / batch_size
+cost = (-T.sum(y_hat * T.log(y) + (1-y_hat) * T.log(1-y)) + 0.5 * 0.1 * reg_param)/ batch_size
 gradients = T.grad(cost, parameters)
 post = T.log(y)
 
@@ -70,7 +71,7 @@ def init():
   global map_idx_48, map_48_idx
   # training data
   print "reading training data"
-  train_inst, train_fbank = readdata.get_small_train_fbank(0)
+  train_inst, train_fbank = readdata.get_train_fbank()
   # testing data
   print "reading testing data"
   test_inst , test_fbank  = readdata.get_test_fbank()
@@ -126,6 +127,7 @@ get_post = theano.function(
     inputs = [x],
     outputs = post
 )
+
 def match(arr):
   global map_idx_48, map_48_39
   idx = 0
@@ -138,8 +140,8 @@ def match(arr):
 
 def validate():
   global map_inst_48, map_inst_48_39
-  idx = int(random.random() * 5) + 1
-  valid_inst, valid_fbank = readdata.get_small_train_fbank(idx)
+  idx = int(random.random() * 5)
+  valid_inst, valid_fbank = readdata.get_validate_fbank(idx)
   valid_result = test(valid_fbank)
   data_size = len(valid_inst)
   correct = 0
@@ -150,18 +152,30 @@ def validate():
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
   return percentage
 
+def cost_init():
+  f = open("cost.csv", "w+")
+  f.write("iteration,cost\n")
+  f.close()
+
+def cost_report(it, cst):
+  f = open("cost.csv", "a+")
+  f.write("%d,%f\n" % (it, cst))
+  f.close()
+
+
 def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.001
+  mu = 0.003
   tStart = time.time()
   
   init()
+  cost_init()
   
   # training information
   print "start training"
-  
+
   it = 1
   mx = 0.0
   while True:
@@ -170,7 +184,8 @@ def run():
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
-    print it, " cost: ", cost
+    print it, "cost:", cost
+    cost_report(it, cost)
     if (it % 50 == 0):
       val = validate()
       f_gen = open("generate.txt", "r")
@@ -179,7 +194,7 @@ def run():
       if val > mx:
         mx = val
         result = test(test_fbank)
-        f = open("result/new.csv", "w+")
+        f = open("result/out.csv", "w+")
         f.write("Id,Prediction\n")
         for i in range(len(test_inst)):
           f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
@@ -189,7 +204,7 @@ def run():
         print "generating my_train.post"
         f = open("./my_train.post", "w+")
         for idx in range(12):
-          train_inst_all, train_fbank_all = readdata.get_train_fbank(idx)
+          train_inst_all, train_fbank_all = readdata.get_seg_train_fbank(idx)
           post_result = get_post(train_fbank_all)
           for i in range(len(train_inst_all)):
             f.write("%s" % train_inst_all[i])
