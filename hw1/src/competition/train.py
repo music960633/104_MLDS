@@ -28,7 +28,7 @@ mu = 1.0
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
 N_INPUT = 69
-N_HIDDEN = 500
+N_HIDDEN = 700
 N_OUTPUT = 48
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
 w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
@@ -59,7 +59,7 @@ a3 = 1.0 / (1 + T.exp(-z3))
 z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
 y  = T.exp(z4) / T.sum(T.exp(z4), axis=0).dimshuffle('x', 0)
 
-cost = (-T.sum(y_hat * T.log(y) + (1-y_hat) * T.log(1-y)) + 0.5 * 0.1 * reg_param)/ batch_size
+cost = (-T.sum(y_hat * T.log(y) + (1-y_hat) * T.log(1-y)) + 0.5 * 0.01 * reg_param)/ batch_size
 gradients = T.grad(cost, parameters)
 post = T.log(y)
 

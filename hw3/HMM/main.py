@@ -79,14 +79,12 @@ def build():
 
 
   # divide by sum, occurance to probability
-  for l in p_tran:
-    s = sum(l)
-    if s == 0: s = 1.0
-    l = map(lambda x: float(x)/s, l)
-  for l in p_emit:
-    s = sum(l)
-    if s == 0: s = 1.0
-    l = map(lambda x: float(x)/s, l)
+  for i in range(len(p_tran)):
+    s = sum(p_tran[i])
+    p_tran[i] = map(lambda x: float(x)/s, p_tran[i])
+  for i in range(len(p_emit)):
+    s = sum(p_emit[i])
+    p_emit[i] = map(lambda x: float(x)/s, p_emit[i])
 
 def viterbi(predictions):
   len_pred = len(predictions)
@@ -145,7 +143,8 @@ def partition(filename):
       if len(now_lst) > 0:
         lst.append(now_lst)
       now_lst = [inst_token[0] + "_" + inst_token[1]]
-    now_lst.append(argmax(tokens[1:]))
+    prob = map(lambda x: math.exp(float(x)), tokens[1:])
+    now_lst.append(argmax(prob))
   if len(now_lst) > 0:
     lst.append(now_lst)
   return lst
@@ -185,7 +184,7 @@ def run():
     s = []
     for p in seq:
       s += map_phone_to_char[map_48_to_39[map_idx_to_phone[p]]]
-    f.write("%s,%s\n" % (lst[0], trim(s)))
+    f.write("%s,%s\n" % (lst[0], trim(window(s))))
   f.close()
 
 build()
