@@ -167,7 +167,7 @@ def run():
   global batch_size, batch_num
   global test_inst
   global mu
-  mu = 0.003
+  mu = 0.001
   tStart = time.time()
   
   init()
@@ -224,4 +224,3 @@ def run():
         f.close()
   
     it += 1
-    mu *= 0.999

@@ -14,7 +14,7 @@ map_48_to_39 = {}
 map_inst_to_phone = {}
 map_phone_to_char = {}
 p_emit = [[0.01 for j in range(N_PHONE)] for i in range(N_PHONE)]
-p_tran = [[0.01 for j in range(N_PHONE)] for i in range(N_PHONE)]
+p_tran = [[0.000001 for j in range(N_PHONE)] for i in range(N_PHONE)]
 
 def build():
   # build phone -> idx mapping
@@ -75,7 +75,9 @@ def build():
     phone = map_inst_to_phone[inst]
     phone_idx = map_phone_to_idx[phone]
     prediction = max(zip(prob, range(48)))[1]
-    p_emit[phone_idx][prediction] += 1
+    # use phone probability instead of argmax
+    for i in range(len(prob)):
+      p_emit[phone_idx][i] += prob[i]
 
 
   # divide by sum, occurance to probability
