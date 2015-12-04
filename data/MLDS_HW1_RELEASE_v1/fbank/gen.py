@@ -2,6 +2,8 @@
 
 import random
 
+g = 0
+
 def gen_small_train_fbank():
   filename = "train.ark"
   # filename = "train.ark"
@@ -14,14 +16,29 @@ def gen_small_train_fbank():
   f.close()
   data_size = len(data)
 
-  for i in range(10):
-    filename = "small_data/train_" + str(i) + ".ark"
+  filename = "small_data/train_all.ark"
+  print "generating", filename, "..."
+  f = open(filename, "w+")
+  for idx in range(data_size):
+    f.write(data[idx][0])
+    for j in range(idx-g, idx+g+1):
+      if j < 0 or j >= data_size:
+        for k in data[idx][1]:
+          f.write(" " + k)
+      else:
+        for k in data[j][1]:
+          f.write(" " + k)
+    f.write('\n')
+  f.close()
+
+  for i in range(5):
+    filename = "small_data/validate_" + str(i) + ".ark"
     print "generating", filename, "..."
     f = open(filename, "w+")
-    for j in range(30000):
+    for j in range(100000):
       idx = int(random.random() * data_size)
       f.write(data[idx][0])
-      for j in range(idx-1, idx+1+1):
+      for j in range(idx-g, idx+g+1):
         if j < 0 or j >= data_size:
           for k in range(69):
             f.write(" 0.0")
@@ -44,7 +61,7 @@ def gen_test_fbank():
   f = open("test2.ark", "w+")
   for i in range(data_size):
     f.write(data[i][0])
-    for j in range(i-1, i+1+1):
+    for j in range(i-g, i+g+1):
       if j < 0 or j >= data_size:
         for k in range(69):
           f.write(" 0.0")
@@ -69,7 +86,7 @@ def gen_train_fbank():
   f = open("train2_" + str(idx) + ".ark", "w+")
   for i in range(data_size):
     f.write(data[i][0])
-    for j in range(i-1, i+1+1):
+    for j in range(i-g, i+g+1):
       if j < 0 or j >= data_size:
         for k in range(69):
           f.write(" 0.0")

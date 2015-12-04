@@ -18,7 +18,7 @@ map_idx_48  = {}
 map_48_idx  = {}
 
 # batch size and number
-batch_size = 256
+batch_size = 128
 batch_num = 128
 
 # learning rate
@@ -27,33 +27,39 @@ mu = 1.0
 # neuron variable declaration
 x     = T.matrix("input")
 y_hat = T.matrix("reference")
-N_INPUT = 69*3
-N_HIDDEN = 512
+N_INPUT = 69
+N_HIDDEN = 700
 N_OUTPUT = 48
 w1    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
 w2    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
+w3    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w4    = theano.shared(numpy.matrix([[random.gauss(0.0, 0.01) for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
 b1    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
 b2    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
-b3    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
-w1_mom    = theano.shared(numpy.matrix([[0.0 for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
-w2_mom    = theano.shared(numpy.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
-w3_mom    = theano.shared(numpy.matrix([[0.0 for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
-b1_mom    = theano.shared(numpy.array([0.0 for i in range(N_HIDDEN)]))
-b2_mom    = theano.shared(numpy.array([0.0 for i in range(N_HIDDEN)]))
-b3_mom    = theano.shared(numpy.array([0.0 for i in range(N_OUTPUT)]))
-parameters = [w1, w2, w3, b1, b2, b3]
-reg = T.sum(w1*w1) + T.sum(w2*w2) + T.sum(w3*w3)
-momentum_params = [w1_mom, w2_mom, w3_mom, b1_mom, b2_mom, b3_mom]
+b3    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_HIDDEN)]))
+b4    = theano.shared(numpy.array([random.gauss(0.0, 0.01) for i in range(N_OUTPUT)]))
+w1_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_INPUT) ] for i in range(N_HIDDEN)]))
+w2_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w3_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_HIDDEN)]))
+w4_ada    = theano.shared(numpy.matrix([[1.0 for j in range(N_HIDDEN)] for i in range(N_OUTPUT)]))
+b1_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
+b2_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
+b3_ada    = theano.shared(numpy.array([1.0 for i in range(N_HIDDEN)]))
+b4_ada    = theano.shared(numpy.array([1.0 for i in range(N_OUTPUT)]))
+parameters = [w1, w2, w3, w4, b1, b2, b3, b4]
+adagrad_params = [w1_ada, w2_ada, w3_ada, w4_ada, b1_ada, b2_ada, b3_ada, b4_ada]
+reg_param = T.sum(w1*w1) + T.sum(w2*w2) + T.sum(w3*w3)
 
-z1 = T.dot(w1, x) + b1.dimshuffle(0, 'x')
+z1 = T.dot(w1, x ) + b1.dimshuffle(0, 'x')
 a1 = 1.0 / (1 + T.exp(-z1))
 z2 = T.dot(w2, a1) + b2.dimshuffle(0, 'x')
-a2 = T.switch(z2<0, 0, z2)
+a2 = 1.0 / (1 + T.exp(-z2))
 z3 = T.dot(w3, a2) + b3.dimshuffle(0, 'x')
-y  = T.exp(z3) / T.sum(T.exp(z3), axis=0).dimshuffle('x', 0)
+a3 = 1.0 / (1 + T.exp(-z3))
+z4 = T.dot(w4, a3) + b4.dimshuffle(0, 'x')
+y  = T.exp(z4) / T.sum(T.exp(z4), axis=0).dimshuffle('x', 0)
 
-cost = T.sum(-T.log(y) * y_hat) / batch_size + (0.1 * reg)
+cost = (-T.sum(y_hat * T.log(y) + (1-y_hat) * T.log(1-y)) + 0.5 * 0.01 * reg_param)/ batch_size
 gradients = T.grad(cost, parameters)
 post = T.log(y)
 
@@ -65,7 +71,7 @@ def init():
   global map_idx_48, map_48_idx
   # training data
   print "reading training data"
-  train_inst, train_fbank = readdata.get_small_train_fbank(0)
+  train_inst, train_fbank = readdata.get_train_fbank()
   # testing data
   print "reading testing data"
   test_inst , test_fbank  = readdata.get_test_fbank()
@@ -77,12 +83,6 @@ def init():
   print "generating phone - index mapping"
   map_48_idx = readdata.get_map_48_idx()
   map_idx_48 = dict(zip(map_48_idx.values(), map_48_idx.keys()))
-
-def change_train_data():
-  global train_inst, train_fbank
-  print "changing training data"
-  idx = int(random.random() * 10)
-  train_inst, train_fbank = readdata.get_small_train_fbank(idx)
 
 
 def make_batch(size, num):
@@ -102,26 +102,18 @@ def make_batch(size, num):
   return X_ret, Y_ret
 
 # update function
-def updateFunc(param, grad):
-  global mu
-  param_updates = [(p, p - mu * g) for p, g in zip(param, grad)]
-  return param_updates
-
-def momentum(param, momentum_params, grad):
+def adagrad(param, adagrad_params, grad):
   global mu
   param_updates = []
-  lamb = 0.5
-  for p, m, g in zip(param, momentum_params, grad):
-    new_m = (lamb * m) - (mu * g)
-    param_updates += [(m, new_m)]
-    param_updates += [(p, p + new_m)]
+  for p, a, g in zip(param, adagrad_params, grad):
+    param_updates += [(p, p - mu * (g / a))]
+    param_updates += [(a, a + g*g)]
   return param_updates
 
 # training function
 train = theano.function(
     inputs = [x, y_hat],
-    # updates = updateFunc(parameters, gradients),
-    updates = momentum(parameters, momentum_params, gradients),
+    updates = adagrad(parameters, adagrad_params, gradients),
     outputs = cost
 )
 
@@ -135,6 +127,7 @@ get_post = theano.function(
     inputs = [x],
     outputs = post
 )
+
 def match(arr):
   global map_idx_48, map_48_39
   idx = 0
@@ -147,8 +140,8 @@ def match(arr):
 
 def validate():
   global map_inst_48, map_inst_48_39
-  idx = int(random.random() * 10)
-  valid_inst, valid_fbank = readdata.get_small_train_fbank(idx)
+  idx = int(random.random() * 5)
+  valid_inst, valid_fbank = readdata.get_validate_fbank(idx)
   valid_result = test(valid_fbank)
   data_size = len(valid_inst)
   correct = 0
@@ -159,6 +152,17 @@ def validate():
   print "validate:", correct, "/", data_size, "(", percentage, ")" 
   return percentage
 
+def cost_init():
+  f = open("cost.csv", "w+")
+  f.write("iteration,cost\n")
+  f.close()
+
+def cost_report(it, cst):
+  f = open("cost.csv", "a+")
+  f.write("%d,%f\n" % (it, cst))
+  f.close()
+
+
 def run():
   global batch_size, batch_num
   global test_inst
@@ -167,10 +171,11 @@ def run():
   tStart = time.time()
   
   init()
+  cost_init()
   
   # training information
   print "start training"
-  
+
   it = 1
   mx = 0.0
   while True:
@@ -179,29 +184,30 @@ def run():
     for j in range(batch_num):
       cost += train(X_batch[j], Y_hat_batch[j])
     cost /= batch_num
-    print it, " cost: ", cost
-    if (it % 20 == 0):
+    print it, "cost:", cost
+    cost_report(it, cost)
+    if (it % 50 == 0):
       val = validate()
       f_gen = open("generate.txt", "r")
       s = f_gen.readline().strip()
       f_gen.close()
-      if val > mx and s == "yes":
+      if val > mx:
         mx = val
         result = test(test_fbank)
-        f = open("result/greenli/new_1.csv", "w+")
+        f = open("result/out.csv", "w+")
         f.write("Id,Prediction\n")
         for i in range(len(test_inst)):
           f.write("%s,%s\n" % (test_inst[i], match([result[j][i] for j in range(48)])))
         f.close()
         
+      if s == "yes":
         print "generating my_train.post"
-        global train_inst, train_fbank
         f = open("./my_train.post", "w+")
         for idx in range(12):
-          train_inst, train_fbank = readdata.get_train_fbank(idx)
-          post_result = get_post(train_fbank)
-          for i in range(len(train_inst)):
-            f.write("%s" % train_inst[i])
+          train_inst_all, train_fbank_all = readdata.get_seg_train_fbank(idx)
+          post_result = get_post(train_fbank_all)
+          for i in range(len(train_inst_all)):
+            f.write("%s" % train_inst_all[i])
             for j in range(48):
               f.write(" %f" % post_result[j][i])
             f.write('\n')
@@ -217,8 +223,4 @@ def run():
           f.write('\n')
         f.close()
   
-        train_inst, train_fbank = readdata.get_small_train_fbank(0)
-
-      # change_train_data()
     it += 1
-    mu *= 0.999
