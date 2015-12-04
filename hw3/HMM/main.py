@@ -13,7 +13,8 @@ map_idx_to_phone = {}
 map_48_to_39 = {}
 map_inst_to_phone = {}
 map_phone_to_char = {}
-p_emit = [[0.01 for j in range(N_PHONE)] for i in range(N_PHONE)]
+p_emit_1 = [[0.000001 for j in range(N_PHONE)] for i in range(N_PHONE)]
+p_emit_2 = [[0.000001 for j in range(N_PHONE)] for i in range(N_PHONE)]
 p_tran = [[0.000001 for j in range(N_PHONE)] for i in range(N_PHONE)]
 
 def build():
@@ -65,7 +66,7 @@ def build():
 
   # build phone -> prediction probability
   print "reading posteriorgram"
-  global p_emit
+  global p_emit_1, p_emit_2
   f_data = open("my_train.post", "r")
   for line in f_data:
     tokens = line.strip().split(' ')
@@ -75,35 +76,43 @@ def build():
     phone = map_inst_to_phone[inst]
     phone_idx = map_phone_to_idx[phone]
     prediction = max(zip(prob, range(48)))[1]
-    # use phone probability instead of argmax
+    # use argmax
+    p_emit_1[phone_idx][prediction] += 1
+    # use phone probability
     for i in range(len(prob)):
-      p_emit[phone_idx][i] += prob[i]
+      p_emit_2[phone_idx][i] += prob[i]
 
 
   # divide by sum, occurance to probability
   for i in range(len(p_tran)):
     s = sum(p_tran[i])
     p_tran[i] = map(lambda x: float(x)/s, p_tran[i])
-  for i in range(len(p_emit)):
-    s = sum(p_emit[i])
-    p_emit[i] = map(lambda x: float(x)/s, p_emit[i])
+  for i in range(len(p_emit_1)):
+    s = sum(p_emit_1[i])
+    p_emit_1[i] = map(lambda x: float(x)/s, p_emit_1[i])
+  for i in range(len(p_emit_2)):
+    s = sum(p_emit_2[i])
+    p_emit_2[i] = map(lambda x: float(x)/s, p_emit_2[i])
 
-def viterbi(predictions):
+  print p_tran[36]
+  print p_emit_1[36]
+
+def viterbi(predictions, tran, emit):
   len_pred = len(predictions)
   dp = [[-INF for j in range(48)] for i in range(len_pred)]
   prev = [[0 for j in range(48)] for i in range(len_pred)]
 
   # start
   for j in range(48):
-    dp[0][j] = math.log(p_tran[48][j]) + math.log(p_emit[j][predictions[0]])
-    # dp[0][j] = math.log(p_emit[j][predictions[0]])
+    # dp[0][j] = math.log(tran[48][j]) + math.log(emit[j][predictions[0]])
+    dp[0][j] = math.log(emit[j][predictions[0]])
     prev[0][j] = -1
 
   # sequence
   for i in range(1, len_pred):
     for j in range(48):
       for k in range(48):
-        prob = dp[i-1][k] + math.log(p_tran[k][j]) + math.log(p_emit[j][predictions[i]])
+        prob = dp[i-1][k] + math.log(tran[k][j]) + math.log(emit[j][predictions[i]])
         if prob > dp[i][j]:
           dp[i][j] = prob
           prev[i][j] = k
@@ -111,8 +120,8 @@ def viterbi(predictions):
   end_prob = -INF
   idx = 0
   for k in range(48):
-    prob = dp[len_pred-1][k] + math.log(p_tran[k][48])
-    # prob = dp[len_pred-1][k]
+    # prob = dp[len_pred-1][k] + math.log(tran[k][48])
+    prob = dp[len_pred-1][k]
     if prob > end_prob:
       end_prob = prob
       idx = k
@@ -176,17 +185,45 @@ def trim(s):
     ret = ret[:-1]
   return ret
 
+def lcs(s1, s2):
+  n1 = len(s1)
+  n2 = len(s2)
+  dp = [[0 for i in range(n2+1)] for i in range(n1+1)]
+  prev = [[(0, 0) for i in range(n2+1)] for i in range(n1+1)]
+  for i in range(n1):
+    for j in range(n2):
+      if s1[i] == s2[j]:
+        dp[i+1][j+1] = dp[i][j] + 1
+        prev[i+1][j+1] = (1, 1)
+      elif dp[i+1][j] > dp[i][j+1]:
+        dp[i+1][j+1] = dp[i+1][j]
+        prev[i+1][j+1] = (0, 1)
+      else:
+        dp[i+1][j+1] = dp[i][j+1]
+        prev[i+1][j+1] = (1, 0)
+  x = n1
+  y = n2
+  ret = ""
+  while x > 0 and y > 0:
+    tmp = prev[x][y]
+    if tmp == (1, 1):
+      ret = s1[x-1] + ret
+    x -= tmp[0]
+    y -= tmp[1]
+
+  return ret
+
 def run():
   lsts = partition("my_test.post")
   f = open("out.csv", "w+")
   f.write("id,phone_sequence\n")
   for lst in lsts:
     print "processing", lst[0], "..."
-    seq = viterbi(lst[1:])
+    seq = viterbi(lst[1:], p_tran, p_emit_2)
     s = []
     for p in seq:
       s += map_phone_to_char[map_48_to_39[map_idx_to_phone[p]]]
-    f.write("%s,%s\n" % (lst[0], trim(window(s))))
+    f.write("%s,%s\n" % (lst[0], trim(s)))
   f.close()
 
 build()
